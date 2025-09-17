@@ -1,15 +1,19 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
 
 function App() {
+  const [loginInfo, setLoginInfo] = useState<{
+    username: string;
+    password: string;
+  }>({
+    username: "",
+    password: "",
+  });
   const [loginMsg, setLoginMsg] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
 
   async function login() {
     try {
+      const { username , password  } = loginInfo;
       const res = await invoke<string>("login", { username, password })
       setLoginMsg(res);
     } catch (e) {
@@ -23,24 +27,13 @@ function App() {
   }
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <main className="w-screen h-screen flex flex-col justify-center items-center gap-4">
+      <h1>qBitView</h1>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <p>A qbittorrent client via Tauri</p>
 
       <form
-        className="row"
+        className="flex flex-row gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           login();
@@ -49,12 +42,18 @@ function App() {
         <div className="flex flex-col gap-2">
           <input
             id="greet-input"
-            onChange={(e) => setUsername(e.currentTarget.value)}
+            onChange={(e) => setLoginInfo({
+              ...loginInfo!,
+              username: e.currentTarget.value,
+            })}
             placeholder="Enter a username..."
           />
           <input
             id="greet-input"
-            onChange={(e) => setPassword(e.currentTarget.value)}
+            onChange={(e) => setLoginInfo({
+              ...loginInfo!,
+              password: e.currentTarget.value,
+            })}
             placeholder="Enter a password..."
           />
         </div>
