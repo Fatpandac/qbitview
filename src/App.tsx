@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
 
 function App() {
   const [loginInfo, setLoginInfo] = useState<{
@@ -13,7 +15,7 @@ function App() {
 
   async function login() {
     try {
-      const { username , password  } = loginInfo;
+      const { username, password } = loginInfo;
       const res = await invoke<string>("login", { username, password })
       setLoginMsg(res);
     } catch (e) {
@@ -33,14 +35,14 @@ function App() {
       <p>A qbittorrent client via Tauri</p>
 
       <form
-        className="flex flex-row gap-2"
+        className="flex flex-row gap-2 w-sm"
         onSubmit={(e) => {
           e.preventDefault();
           login();
         }}
       >
-        <div className="flex flex-col gap-2">
-          <input
+        <div className="flex flex-col gap-2 w-full">
+          <Input
             id="greet-input"
             onChange={(e) => setLoginInfo({
               ...loginInfo!,
@@ -48,7 +50,7 @@ function App() {
             })}
             placeholder="Enter a username..."
           />
-          <input
+          <Input
             id="greet-input"
             onChange={(e) => setLoginInfo({
               ...loginInfo!,
@@ -57,7 +59,9 @@ function App() {
             placeholder="Enter a password..."
           />
         </div>
-        <button type="submit">Login</button>
+        <Button
+          className="h-full"
+          type="submit">Login</Button>
       </form>
       <p>{loginMsg}</p>
     </main>
