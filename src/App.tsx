@@ -16,14 +16,14 @@ function App() {
   async function login() {
     try {
       const { username, password } = loginInfo;
-      const res = await invoke<string>("login", { username, password })
+      const res = await invoke<string>("login", { username, password });
       setLoginMsg(res);
     } catch (e) {
       setLoginMsg("Login failed: " + e);
       let timer = setTimeout(() => {
         setLoginMsg("");
         clearTimeout(timer);
-      }, 3000)
+      }, 3000);
       return;
     }
   }
@@ -41,27 +41,31 @@ function App() {
           login();
         }}
       >
-        <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col gap-2 w-4/5">
           <Input
             id="greet-input"
-            onChange={(e) => setLoginInfo({
-              ...loginInfo!,
-              username: e.currentTarget.value,
-            })}
+            onChange={(e) =>
+              setLoginInfo({
+                ...loginInfo!,
+                username: e.currentTarget.value,
+              })
+            }
             placeholder="Enter a username..."
           />
           <Input
             id="greet-input"
-            onChange={(e) => setLoginInfo({
-              ...loginInfo!,
-              password: e.currentTarget.value,
-            })}
+            onChange={(e) =>
+              setLoginInfo({
+                ...loginInfo!,
+                password: e.currentTarget.value,
+              })
+            }
             placeholder="Enter a password..."
           />
         </div>
-        <Button
-          className="h-full"
-          type="submit">Login</Button>
+        <Button className="h-full flex-1" type="submit">
+          Login
+        </Button>
       </form>
       <p>{loginMsg}</p>
     </main>
