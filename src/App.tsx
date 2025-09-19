@@ -2,19 +2,25 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import { Navigate } from "react-router";
 import useUser from "./sotres/user";
+import router from "./router";
 
 function App() {
-  const { setAuthorized } = useUser();
+  const { authorized, setAuthorized } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
   const [loginInfo, setLoginInfo] = useState({ username: "", password: "" });
+
+  if (authorized) {
+    return <Navigate to="/main" replace />;
+  }
 
   async function login() {
     try {
       const { username, password } = loginInfo;
-      const res = await invoke<string>("login", { username, password });
+      await invoke("login", { username, password });
       setAuthorized(true);
-      setLoginMsg(res);
+      router.navigate("/main");
     } catch (e) {
       setLoginMsg("Login failed: " + e);
       let timer = setTimeout(() => {
@@ -42,7 +48,7 @@ function App() {
           <Input
             id="greet-input"
             onChange={(e) =>
-               setLoginInfo({
+              setLoginInfo({
                 ...loginInfo,
                 username: e.currentTarget.value,
               })
