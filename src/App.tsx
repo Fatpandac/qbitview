@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Navigate } from "react-router";
+import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import useUser from "./sotres/user";
 import router from "./router";
 
@@ -70,7 +71,14 @@ function App() {
           Login
         </Button>
       </form>
-      <p>{loginMsg}</p>
+      <Alert
+        variant="destructive"
+        className="fixed bottom-4 right-4 w-80"
+        hidden={!loginMsg}
+      >
+        <AlertTitle>Login failed</AlertTitle>
+        <AlertDescription>{loginMsg}</AlertDescription>
+      </Alert>
     </main>
   );
 }
