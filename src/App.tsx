@@ -2,20 +2,15 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import useUser from "./sotres/user";
 
 function App() {
-  const [loginInfo, setLoginInfo] = useState<{
-    username: string;
-    password: string;
-  }>({
-    username: "",
-    password: "",
-  });
+  const { authInfo, setAuthInfo } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
 
   async function login() {
     try {
-      const { username, password } = loginInfo;
+      const { username, password } = authInfo;
       const res = await invoke<string>("login", { username, password });
       setLoginMsg(res);
     } catch (e) {
@@ -45,8 +40,8 @@ function App() {
           <Input
             id="greet-input"
             onChange={(e) =>
-              setLoginInfo({
-                ...loginInfo!,
+              setAuthInfo({
+                ...authInfo,
                 username: e.currentTarget.value,
               })
             }
@@ -55,8 +50,8 @@ function App() {
           <Input
             id="greet-input"
             onChange={(e) =>
-              setLoginInfo({
-                ...loginInfo!,
+              setAuthInfo({
+                ...authInfo,
                 password: e.currentTarget.value,
               })
             }
