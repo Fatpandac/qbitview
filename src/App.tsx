@@ -5,13 +5,15 @@ import { Input } from "./components/ui/input";
 import useUser from "./sotres/user";
 
 function App() {
-  const { authInfo, setAuthInfo } = useUser();
+  const { setAuthorized } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
+  const [loginInfo, setLoginInfo] = useState({ username: "", password: "" });
 
   async function login() {
     try {
-      const { username, password } = authInfo;
+      const { username, password } = loginInfo;
       const res = await invoke<string>("login", { username, password });
+      setAuthorized(true);
       setLoginMsg(res);
     } catch (e) {
       setLoginMsg("Login failed: " + e);
@@ -40,8 +42,8 @@ function App() {
           <Input
             id="greet-input"
             onChange={(e) =>
-              setAuthInfo({
-                ...authInfo,
+               setLoginInfo({
+                ...loginInfo,
                 username: e.currentTarget.value,
               })
             }
@@ -50,8 +52,8 @@ function App() {
           <Input
             id="greet-input"
             onChange={(e) =>
-              setAuthInfo({
-                ...authInfo,
+              setLoginInfo({
+                ...loginInfo,
                 password: e.currentTarget.value,
               })
             }
