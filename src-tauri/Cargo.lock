@@ -2979,6 +2979,7 @@ dependencies = [
 name = "qbitview"
 version = "0.1.0"
 dependencies = [
+ "once_cell",
  "qbit-rs",
  "serde",
  "serde_json",
