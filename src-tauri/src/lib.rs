@@ -8,9 +8,9 @@ use std::sync::Arc;
 static CLIENT: Lazy<Arc<Mutex<Option<Qbit>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
 
 #[tauri::command]
-async fn login(username: &str, password: &str) -> Result<String, String> {
+async fn login(username: &str, password: &str, domain: &str) -> Result<String, String> {
     let credential = Credential::new(username, password);
-    let api = Qbit::new("http://192.168.31.209:8080", credential);
+    let api = Qbit::new(domain, credential);
     let login_res = api.login(true).await;
     if let Ok(_) = login_res {
         let mut client = CLIENT.lock().await;

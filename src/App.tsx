@@ -10,7 +10,11 @@ import router from "./router";
 function App() {
   const { authorized, setAuthorized } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
-  const [loginInfo, setLoginInfo] = useState({ username: "", password: "" });
+  const [loginInfo, setLoginInfo] = useState({
+    username: "",
+    password: "",
+    domain: "",
+  });
 
   if (authorized) {
     return <Navigate to="/main" replace />;
@@ -18,8 +22,8 @@ function App() {
 
   async function login() {
     try {
-      const { username, password } = loginInfo;
-      await invoke("login", { username, password });
+      const { username, password, domain } = loginInfo;
+      await invoke("login", { username, password, domain });
       setAuthorized(true);
       router.navigate("/main");
     } catch (e) {
@@ -47,7 +51,17 @@ function App() {
       >
         <div className="flex flex-col gap-2 w-4/5">
           <Input
-            id="greet-input"
+            type="url"
+            defaultValue="http://localhost:8080"
+            onChange={(e) =>
+              setLoginInfo({
+                ...loginInfo,
+                domain: e.currentTarget.value,
+              })
+            }
+            placeholder="Enter domain (with http/https) ..."
+          />
+          <Input
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
@@ -57,7 +71,6 @@ function App() {
             placeholder="Enter a username..."
           />
           <Input
-            id="greet-input"
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
