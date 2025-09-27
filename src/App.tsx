@@ -71,6 +71,7 @@ function App() {
             placeholder="Enter a username..."
           />
           <Input
+            type="password"
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
