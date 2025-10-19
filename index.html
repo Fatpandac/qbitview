@@ -7,14 +7,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>qbitview</title>
   <script>
-    !(function () {
-      var e =
-        window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches,
-        t = localStorage.getItem("use-dark") || "system";
-      ('"dark"' === t || (e && '"light"' !== t)) &&
-        document.documentElement.classList.toggle("dark", !0);
-    })();
+    function applyTheme(theme) {
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    }
+
+    function detectSystemTheme() {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+      applyTheme(mediaQuery.matches ? "dark" : "light");
+
+      mediaQuery.addEventListener("change", (e) => {
+        console.log("System theme change detected");
+        const newTheme = e.matches ? "dark" : "light";
+        applyTheme(newTheme);
+        console.log("System theme changed to:", newTheme);
+      });
+    }
+
+    detectSystemTheme();
   </script>
   <style>
     html.dark {
