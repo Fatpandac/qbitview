@@ -202,6 +202,62 @@ async fn get_transfer_info() -> Result<TransferInfoResponse, String> {
     }
 }
 
+#[tauri::command]
+async fn get_torrent_properties(hash: String) -> Result<serde_json::Value, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref api) = *client {
+        let p = api.get_torrent_properties(&hash).await.map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({
+            "save_path": p.save_path,
+            "creation_date": p.creation_date,
+            "piece_size": p.piece_size,
+            "comment": p.comment,
+            "total_wasted": p.total_wasted,
+            "total_uploaded": p.total_uploaded,
+            "total_uploaded_session": p.total_uploaded_session,
+            "total_downloaded": p.total_downloaded,
+            "total_downloaded_session": p.total_downloaded_session,
+            "up_limit": p.up_limit,
+            "dl_limit": p.dl_limit,
+            "time_elapsed": p.time_elapsed,
+            "seeding_time": p.seeding_time,
+            "nb_connections": p.nb_connections,
+            "nb_connections_limit": p.nb_connections_limit,
+            "share_ratio": p.share_ratio,
+            "addition_date": p.addition_date,
+            "completion_date": p.completion_date,
+            "created_by": p.created_by,
+            "dl_speed_avg": p.dl_speed_avg,
+            "dl_speed": p.dl_speed,
+            "eta": p.eta,
+            "last_seen": p.last_seen,
+            "peers": p.peers,
+            "peers_total": p.peers_total,
+            "pieces_have": p.pieces_have,
+            "pieces_num": p.pieces_num,
+            "reannounce": p.reannounce,
+            "seeds": p.seeds,
+            "seeds_total": p.seeds_total,
+            "total_size": p.total_size,
+            "up_speed_avg": p.up_speed_avg,
+            "up_speed": p.up_speed,
+        }))
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_torrent_pieces_states(hash: String) -> Result<Vec<u8>, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref api) = *client {
+        let states = api.get_torrent_pieces_states(&hash).await.map_err(|e| e.to_string())?;
+        Ok(states.iter().map(|s| *s as u8).collect())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -216,6 +272,8 @@ pub fn run() {
             get_transfer_info,
             add_torrent_urls,
             add_torrent_file,
+            get_torrent_properties,
+            get_torrent_pieces_states,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

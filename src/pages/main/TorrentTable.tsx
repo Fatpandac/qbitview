@@ -17,10 +17,18 @@ function ProgressBar({ value }: { value?: number }) {
 interface TorrentTableProps {
   torrents: Torrent[];
   selected: Set<string>;
+  activeTorrentHash?: string;
   onToggleSelect: (hash: string, e: React.MouseEvent) => void;
+  onRowClick: (torrent: Torrent) => void;
 }
 
-export function TorrentTable({ torrents, selected, onToggleSelect }: TorrentTableProps) {
+export function TorrentTable({
+  torrents,
+  selected,
+  activeTorrentHash,
+  onToggleSelect,
+  onRowClick,
+}: TorrentTableProps) {
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full text-sm border-collapse">
@@ -49,14 +57,21 @@ export function TorrentTable({ torrents, selected, onToggleSelect }: TorrentTabl
           {torrents.map((t) => {
             const hash = t.hash ?? "";
             const isSelected = selected.has(hash);
+            const isActive = hash === activeTorrentHash;
             const { label, color } = getStateLabel(t.state);
             return (
               <tr
                 key={hash}
-                onClick={(e) => onToggleSelect(hash, e)}
+                onClick={(e) => {
+                  onToggleSelect(hash, e);
+                  if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                    onRowClick(t);
+                  }
+                }}
                 className={cn(
                   "border-b border-border/40 cursor-pointer transition-colors hover:bg-muted/50",
                   isSelected && "bg-accent/60 hover:bg-accent/70",
+                  isActive && "ring-1 ring-inset ring-primary/50",
                 )}
               >
                 <td className="px-4 py-2 truncate max-w-0">

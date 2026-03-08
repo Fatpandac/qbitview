@@ -7,6 +7,7 @@ import { TorrentTable } from "./TorrentTable";
 import { StatusBar } from "./StatusBar";
 import { AddTorrentModal } from "./AddTorrentModal";
 import { DeleteModal } from "./DeleteModal";
+import { TorrentDrawer } from "./TorrentDrawer";
 
 function Main() {
   const [version, setVersion] = useState("");
@@ -14,6 +15,7 @@ function Main() {
   const [transferInfo, setTransferInfo] = useState<TransferInfo | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [activeTorrent, setActiveTorrent] = useState<Torrent | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -27,6 +29,11 @@ function Main() {
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
+      // Keep activeTorrent in sync with latest data
+      if (activeTorrent) {
+        const updated = ts.find((t) => t.hash === activeTorrent.hash);
+        if (updated) setActiveTorrent(updated);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -93,7 +100,7 @@ function Main() {
         transferInfo={transferInfo}
       />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Toolbar
           totalCount={torrents.length}
           selectedCount={selectedHashes.length}
@@ -105,10 +112,21 @@ function Main() {
         <TorrentTable
           torrents={torrents}
           selected={selected}
+          activeTorrentHash={activeTorrent?.hash}
           onToggleSelect={toggleSelect}
+          onRowClick={(t) =>
+            setActiveTorrent((prev) => (prev?.hash === t.hash ? null : t))
+          }
         />
         {transferInfo && <StatusBar transferInfo={transferInfo} />}
       </div>
+
+      {activeTorrent && (
+        <TorrentDrawer
+          torrent={activeTorrent}
+          onClose={() => setActiveTorrent(null)}
+        />
+      )}
 
       {showAddModal && (
         <AddTorrentModal
@@ -129,3 +147,4 @@ function Main() {
 }
 
 export default Main;
+
