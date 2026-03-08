@@ -209,6 +209,10 @@ function ContentPanel({ contents }: { contents: TorrentContent[] }) {
 }
 
 /* ── main drawer ── */
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 600;
+const DEFAULT_WIDTH = 320;
+
 export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
   const [tab, setTab] = useState<Tab>("info");
   const [property, setProperty] = useState<TorrentProperty | null>(null);
@@ -218,7 +222,31 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
   const [webseeds, setWebseeds] = useState<string[]>([]);
   const [contents, setContents] = useState<TorrentContent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
   const piecesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startWidth = useRef(0);
+
+  const onResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startWidth.current = width;
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = startX.current - ev.clientX;
+      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta)));
+    };
+    const onMouseUp = () => {
+      dragging.current = false;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
 
   useEffect(() => {
     if (!torrent.hash) return;
@@ -265,7 +293,15 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
   }, [torrent.hash]);
 
   return (
-    <div className="w-80 xl:w-96 shrink-0 border-l bg-background flex flex-col overflow-hidden">
+    <div
+      className="shrink-0 border-l bg-background flex flex-col overflow-hidden relative"
+      style={{ width }}
+    >
+      {/* Resize handle */}
+      <div
+        onMouseDown={onResizeStart}
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/40 transition-colors z-10"
+      />
       {/* Header */}
       <div className="flex items-start justify-between gap-2 px-4 py-3 border-b shrink-0">
         <div className="min-w-0">
