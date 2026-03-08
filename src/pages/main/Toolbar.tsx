@@ -1,4 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "@/components/ui/button";
 import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
@@ -9,10 +8,6 @@ interface ToolbarProps {
   onPause: () => void;
   onResume: () => void;
   onDelete: () => void;
-}
-
-function onDragStart(e: React.MouseEvent) {
-  if (e.buttons === 1) getCurrentWindow().startDragging();
 }
 
 export function Toolbar({
@@ -27,33 +22,31 @@ export function Toolbar({
 
   return (
     <div
-      onMouseDown={onDragStart}
-      className="flex items-center gap-2 px-4 border-b shrink-0 cursor-move"
+      data-tauri-drag-region
+      className="flex items-center gap-2 px-4 border-b shrink-0"
       style={{ height: "52px" }}
     >
-      <div className="flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
-        <Button size="sm" onClick={onAdd}>
-          <PlusIcon className="size-4" />
-          Add
-        </Button>
+      <Button size="sm" onClick={onAdd}>
+        <PlusIcon className="size-4" />
+        Add
+      </Button>
 
-        <div className="w-px h-5 bg-border mx-1" />
+      <div className="w-px h-5 bg-border mx-1" />
 
-        <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onPause}>
-          <CirclePauseIcon className="size-4" />
-          Pause
-        </Button>
-        <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onResume}>
-          <CirclePlayIcon className="size-4" />
-          Resume
-        </Button>
-        <Button size="sm" variant="destructive" disabled={!hasSelection} onClick={onDelete}>
-          <Trash2Icon className="size-4" />
-          Delete
-        </Button>
-      </div>
+      <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onPause}>
+        <CirclePauseIcon className="size-4" />
+        Pause
+      </Button>
+      <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onResume}>
+        <CirclePlayIcon className="size-4" />
+        Resume
+      </Button>
+      <Button size="sm" variant="destructive" disabled={!hasSelection} onClick={onDelete}>
+        <Trash2Icon className="size-4" />
+        Delete
+      </Button>
 
-      <span className="ml-auto text-xs text-muted-foreground select-none">
+      <span data-tauri-drag-region className="ml-auto text-xs text-muted-foreground select-none pointer-events-none">
         {totalCount} torrents
         {hasSelection && ` · ${selectedCount} selected`}
       </span>

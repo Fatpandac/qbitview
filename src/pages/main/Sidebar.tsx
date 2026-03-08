@@ -1,4 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ArrowDownIcon, ArrowUpIcon, NetworkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FilterKey, TransferInfo } from "./types";
@@ -11,23 +10,23 @@ interface SidebarProps {
   transferInfo: TransferInfo | null;
 }
 
-function onDragStart(e: React.MouseEvent) {
-  if (e.buttons === 1) getCurrentWindow().startDragging();
-}
-
 export function Sidebar({ version, filter, onFilterChange, transferInfo }: SidebarProps) {
   return (
     <aside className="w-44 shrink-0 flex flex-col border-r bg-muted/30">
-      {/* Draggable title bar zone — sits over the macOS traffic lights area */}
+      {/* Draggable title bar zone */}
       <div
-        onMouseDown={onDragStart}
-        className="shrink-0 border-b select-none cursor-move"
+        data-tauri-drag-region
+        className="shrink-0 border-b select-none"
         style={{ height: "52px" }}
       >
-        <div className="flex flex-col justify-end h-full pb-2" style={{ paddingLeft: "76px" }}>
-          <h1 className="font-bold text-sm tracking-tight leading-none">qBitView</h1>
+        <div
+          data-tauri-drag-region
+          className="flex flex-col justify-end h-full pb-2"
+          style={{ paddingLeft: "76px" }}
+        >
+          <h1 data-tauri-drag-region className="font-bold text-sm tracking-tight leading-none pointer-events-none">qBitView</h1>
           {version && (
-            <p className="text-xs text-muted-foreground mt-0.5">{version}</p>
+            <p data-tauri-drag-region className="text-xs text-muted-foreground mt-0.5 pointer-events-none">{version}</p>
           )}
         </div>
       </div>
