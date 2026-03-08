@@ -52,21 +52,16 @@ function Main() {
     };
   }, [filter]);
 
-  function toggleSelect(hash: string, e: React.MouseEvent) {
+  function toggleSelect(hash: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (e.shiftKey || e.ctrlKey || e.metaKey) {
-        next.has(hash) ? next.delete(hash) : next.add(hash);
-      } else {
-        if (next.size === 1 && next.has(hash)) {
-          next.clear();
-        } else {
-          next.clear();
-          next.add(hash);
-        }
-      }
+      next.has(hash) ? next.delete(hash) : next.add(hash);
       return next;
     });
+  }
+
+  function selectAll(checked: boolean) {
+    setSelected(checked ? new Set(torrents.map((t) => t.hash ?? "")) : new Set());
   }
 
   const selectedHashes = Array.from(selected);
@@ -113,7 +108,8 @@ function Main() {
           torrents={torrents}
           selected={selected}
           activeTorrentHash={activeTorrent?.hash}
-          onToggleSelect={toggleSelect}
+          onToggleSelect={(hash) => toggleSelect(hash)}
+          onSelectAll={selectAll}
           onRowClick={(t) =>
             setActiveTorrent((prev) => (prev?.hash === t.hash ? null : t))
           }

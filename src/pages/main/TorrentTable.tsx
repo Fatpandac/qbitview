@@ -18,7 +18,8 @@ interface TorrentTableProps {
   torrents: Torrent[];
   selected: Set<string>;
   activeTorrentHash?: string;
-  onToggleSelect: (hash: string, e: React.MouseEvent) => void;
+  onToggleSelect: (hash: string) => void;
+  onSelectAll: (checked: boolean) => void;
   onRowClick: (torrent: Torrent) => void;
 }
 
@@ -27,14 +28,27 @@ export function TorrentTable({
   selected,
   activeTorrentHash,
   onToggleSelect,
+  onSelectAll,
   onRowClick,
 }: TorrentTableProps) {
+  const allSelected = torrents.length > 0 && torrents.every((t) => selected.has(t.hash ?? ""));
+  const someSelected = !allSelected && torrents.some((t) => selected.has(t.hash ?? ""));
+
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full text-sm border-collapse">
         <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
           <tr className="text-muted-foreground text-xs uppercase tracking-wide">
-            <th className="text-left px-4 py-2 font-medium w-1/3">Name</th>
+            <th className="px-3 py-2 w-8">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+                className="size-4 cursor-pointer accent-primary"
+              />
+            </th>
+            <th className="text-left px-2 py-2 font-medium w-1/3">Name</th>
             <th className="text-right px-3 py-2 font-medium w-20">Size</th>
             <th className="text-left px-3 py-2 font-medium w-28">Progress</th>
             <th className="text-left px-3 py-2 font-medium w-28">Status</th>
@@ -49,7 +63,7 @@ export function TorrentTable({
         <tbody>
           {torrents.length === 0 && (
             <tr>
-              <td colSpan={10} className="text-center py-16 text-muted-foreground">
+              <td colSpan={11} className="text-center py-16 text-muted-foreground">
                 No torrents found
               </td>
             </tr>
@@ -63,10 +77,10 @@ export function TorrentTable({
               <tr
                 key={hash}
                 onClick={(e) => {
-                  onToggleSelect(hash, e);
-                  if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                    onRowClick(t);
-                  }
+                  // Don't trigger row click if clicking the checkbox cell
+                  const target = e.target as HTMLElement;
+                  if (target.tagName === "INPUT") return;
+                  onRowClick(t);
                 }}
                 className={cn(
                   "border-b border-border/40 cursor-pointer transition-colors hover:bg-muted/50",
@@ -74,7 +88,16 @@ export function TorrentTable({
                   isActive && "ring-1 ring-inset ring-primary/50",
                 )}
               >
-                <td className="px-4 py-2 truncate max-w-0">
+                <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(hash)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="size-4 cursor-pointer accent-primary"
+                  />
+                </td>
+                <td className="px-2 py-2 truncate max-w-0">
                   <span className="truncate block" title={t.name ?? ""}>
                     {t.name ?? "—"}
                   </span>
