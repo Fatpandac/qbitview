@@ -38,8 +38,10 @@ async fn login(username: &str, password: &str, domain: &str) -> Result<String, S
         .map_err(|e| e.to_string())?;
 
     let actual_domain = {
-        let probe_url = format!("{}/api/v2/auth/login", domain);
-        match probe_client.post(&probe_url).send().await {
+        // Use a non-auth endpoint for the probe to avoid triggering qBittorrent's
+        // failed-login rate limiter (which bans IPs after repeated failures).
+        let probe_url = format!("{}/api/v2/app/webapiVersion", domain);
+        match probe_client.get(&probe_url).send().await {
             Ok(resp) if resp.status().is_redirection() => {
                 resp.headers()
                     .get("location")
