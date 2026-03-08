@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -7,14 +7,34 @@ import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import useUser from "./sotres/user";
 import router from "./router";
 
+const DEV_DOMAIN = import.meta.env.VITE_DEV_DOMAIN as string | undefined;
+const DEV_USERNAME = import.meta.env.VITE_DEV_USERNAME as string | undefined;
+const DEV_PASSWORD = import.meta.env.VITE_DEV_PASSWORD as string | undefined;
+const DEV_AUTO_LOGIN = import.meta.env.DEV && DEV_DOMAIN && DEV_USERNAME && DEV_PASSWORD;
+
 function App() {
   const { authorized, setAuthorized } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
   const [loginInfo, setLoginInfo] = useState({
-    username: "",
-    password: "",
-    domain: "",
+    username: DEV_USERNAME ?? "",
+    password: DEV_PASSWORD ?? "",
+    domain: DEV_DOMAIN ?? "",
   });
+
+  useEffect(() => {
+    if (DEV_AUTO_LOGIN && !authorized) {
+      invoke("login", {
+        username: DEV_USERNAME,
+        password: DEV_PASSWORD,
+        domain: DEV_DOMAIN,
+      })
+        .then(() => {
+          setAuthorized(true);
+          router.navigate("/main");
+        })
+        .catch((e) => setLoginMsg("Auto-login failed: " + e));
+    }
+  }, []);
 
   if (authorized) {
     return <Navigate to="/main" replace />;
@@ -52,7 +72,7 @@ function App() {
         <div className="flex flex-col gap-2 w-4/5">
           <Input
             type="url"
-            defaultValue="http://localhost:8080"
+            defaultValue={loginInfo.domain || "http://localhost:8080"}
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
@@ -62,6 +82,7 @@ function App() {
             placeholder="Enter domain (with http/https) ..."
           />
           <Input
+            defaultValue={loginInfo.username}
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
@@ -72,6 +93,7 @@ function App() {
           />
           <Input
             type="password"
+            defaultValue={loginInfo.password}
             onChange={(e) =>
               setLoginInfo({
                 ...loginInfo,
@@ -85,6 +107,11 @@ function App() {
           Login
         </Button>
       </form>
+      {DEV_AUTO_LOGIN && (
+        <p className="text-xs text-muted-foreground">
+          Dev mode: auto-logging in as <span className="font-medium">{DEV_USERNAME}</span> @ {DEV_DOMAIN}
+        </p>
+      )}
       <Alert
         variant="destructive"
         className="fixed bottom-4 right-4 w-80"
