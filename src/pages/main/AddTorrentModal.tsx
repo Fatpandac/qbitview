@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils";
 interface AddTorrentModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialFile?: File;
 }
 
-export function AddTorrentModal({ onClose, onSuccess }: AddTorrentModalProps) {
-  const [tab, setTab] = useState<"url" | "file">("url");
+export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentModalProps) {
+  const [tab, setTab] = useState<"url" | "file">(initialFile ? "file" : "url");
   const [url, setUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [savepath, setSavepath] = useState("");
   const [category, setCategory] = useState("");
   const [paused, setPaused] = useState(false);

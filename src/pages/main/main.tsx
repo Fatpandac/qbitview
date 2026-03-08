@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
+import { UploadIcon } from "lucide-react";
 import { FilterKey, Torrent, TransferInfo } from "./types";
 import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
@@ -17,7 +18,10 @@ function Main() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeTorrent, setActiveTorrent] = useState<Torrent | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [dropFile, setDropFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchData() {
@@ -29,7 +33,6 @@ function Main() {
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
-      // Keep activeTorrent in sync with latest data
       if (activeTorrent) {
         const updated = ts.find((t) => t.hash === activeTorrent.hash);
         if (updated) setActiveTorrent(updated);
@@ -86,8 +89,60 @@ function Main() {
     fetchData();
   }
 
+  // Drag-and-drop handlers — use a counter to handle nested drag events correctly
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) setIsDragging(false);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    const torrentFile = Array.from(e.dataTransfer.files).find((f) =>
+      f.name.endsWith(".torrent")
+    );
+    if (torrentFile) {
+      setDropFile(torrentFile);
+      setShowAddModal(true);
+    }
+  }
+
+  function handleCloseAddModal() {
+    setShowAddModal(false);
+    setDropFile(null);
+  }
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div
+      className="flex h-screen w-screen overflow-hidden bg-background text-foreground relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drop overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-50 bg-primary/10 border-4 border-dashed border-primary rounded-lg m-2 pointer-events-none flex flex-col items-center justify-center gap-3">
+          <UploadIcon className="size-14 text-primary" />
+          <p className="text-lg font-semibold text-primary">Drop .torrent file to add</p>
+        </div>
+      )}
+
       <Sidebar
         version={version}
         filter={filter}
@@ -99,7 +154,7 @@ function Main() {
         <Toolbar
           totalCount={torrents.length}
           selectedCount={selectedHashes.length}
-          onAdd={() => setShowAddModal(true)}
+          onAdd={() => { setDropFile(null); setShowAddModal(true); }}
           onPause={handleStop}
           onResume={handleStart}
           onDelete={() => setShowDeleteModal(true)}
@@ -126,8 +181,9 @@ function Main() {
 
       {showAddModal && (
         <AddTorrentModal
-          onClose={() => setShowAddModal(false)}
+          onClose={handleCloseAddModal}
           onSuccess={fetchData}
+          initialFile={dropFile ?? undefined}
         />
       )}
 
@@ -143,4 +199,3 @@ function Main() {
 }
 
 export default Main;
-
