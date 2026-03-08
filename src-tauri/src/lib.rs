@@ -319,6 +319,11 @@ async fn get_torrent_pieces_states(hash: String) -> Result<Vec<u8>, String> {
     }
 }
 
+#[tauri::command]
+fn read_file(path: String) -> Result<Vec<u8>, String> {
+    std::fs::read(&path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -335,6 +340,7 @@ pub fn run() {
             add_torrent_file,
             get_torrent_properties,
             get_torrent_pieces_states,
+            read_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

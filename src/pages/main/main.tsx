@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
 import { FilterKey, Torrent, TransferInfo } from "./types";
@@ -21,8 +22,41 @@ function Main() {
   const [dropFile, setDropFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const dragCounterRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Listen to Tauri's native file-drop event (browser drag events are intercepted by the webview)
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    getCurrentWebview().onDragDropEvent(async (event) => {
+      const { type } = event.payload;
+      if (type === "enter" || type === "over") {
+        const paths = "paths" in event.payload ? event.payload.paths : [];
+        if (paths.some((p) => p.endsWith(".torrent"))) {
+          setIsDragging(true);
+        }
+      } else if (type === "drop") {
+        setIsDragging(false);
+        const paths = "paths" in event.payload ? event.payload.paths : [];
+        const torrentPath = paths.find((p) => p.endsWith(".torrent"));
+        if (torrentPath) {
+          try {
+            const bytes = await invoke<number[]>("read_file", { path: torrentPath });
+            const filename = torrentPath.split("/").pop() ?? torrentPath.split("\\").pop() ?? "file.torrent";
+            const file = new File([new Uint8Array(bytes)], filename, { type: "application/x-bittorrent" });
+            setDropFile(file);
+            setShowAddModal(true);
+          } catch (e) {
+            console.error("Failed to read dropped file:", e);
+          }
+        }
+      } else if (type === "leave") {
+        setIsDragging(false);
+      }
+    }).then((fn) => { unlisten = fn; });
+
+    return () => { unlisten?.(); };
+  }, []);
 
   async function fetchData() {
     try {
@@ -89,53 +123,13 @@ function Main() {
     fetchData();
   }
 
-  // Drag-and-drop handlers — use a counter to handle nested drag events correctly
-  function handleDragEnter(e: React.DragEvent) {
-    e.preventDefault();
-    dragCounterRef.current += 1;
-    if (e.dataTransfer.types.includes("Files")) {
-      setIsDragging(true);
-    }
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault();
-    dragCounterRef.current -= 1;
-    if (dragCounterRef.current === 0) setIsDragging(false);
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    dragCounterRef.current = 0;
-    setIsDragging(false);
-    const torrentFile = Array.from(e.dataTransfer.files).find((f) =>
-      f.name.endsWith(".torrent")
-    );
-    if (torrentFile) {
-      setDropFile(torrentFile);
-      setShowAddModal(true);
-    }
-  }
-
   function handleCloseAddModal() {
     setShowAddModal(false);
     setDropFile(null);
   }
 
   return (
-    <div
-      className="flex h-screen w-screen overflow-hidden bg-background text-foreground relative"
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-    >
-      {/* Drop overlay */}
+    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground relative">
       {isDragging && (
         <div className="absolute inset-0 z-50 bg-primary/10 border-4 border-dashed border-primary rounded-lg m-2 pointer-events-none flex flex-col items-center justify-center gap-3">
           <UploadIcon className="size-14 text-primary" />
