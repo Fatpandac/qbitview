@@ -20,32 +20,53 @@ struct TransferInfoResponse {
 
 #[tauri::command]
 async fn login(username: &str, password: &str, domain: &str) -> Result<String, String> {
-    let credential = Credential::new(username, password);
+    let domain = domain.trim_end_matches('/');
 
-    // Build a client with Origin header to satisfy qBittorrent's CSRF check
-    let origin = HeaderValue::from_str(domain).map_err(|e| e.to_string())?;
+    // Probe for HTTP→HTTPS redirects (Caddy and other reverse proxies redirect HTTP to HTTPS).
+    // reqwest strips the Cookie header when following cross-scheme redirects, so we must
+    // connect to the final URL directly to avoid losing the session cookie on every API call.
+    let probe_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let actual_domain = {
+        let probe_url = format!("{}/api/v2/auth/login", domain);
+        match probe_client.post(&probe_url).send().await {
+            Ok(resp) if resp.status().is_redirection() => {
+                resp.headers()
+                    .get("location")
+                    .and_then(|loc| loc.to_str().ok())
+                    .and_then(|loc| url::Url::parse(loc).ok())
+                    .map(|url| {
+                        let port = url.port().map(|p| format!(":{}", p)).unwrap_or_default();
+                        format!("{}://{}{}", url.scheme(), url.host_str().unwrap_or(""), port)
+                    })
+                    .unwrap_or_else(|| domain.to_string())
+            }
+            _ => domain.to_string(),
+        }
+    };
+
+    // Build client with Origin/Referer set to the real domain (satisfies qBittorrent CSRF check)
+    let origin = HeaderValue::from_str(&actual_domain).map_err(|e| e.to_string())?;
     let mut default_headers = HeaderMap::new();
     default_headers.insert(header::ORIGIN, origin.clone());
     default_headers.insert(header::REFERER, origin);
     let http_client = reqwest::Client::builder()
         .default_headers(default_headers)
+        .danger_accept_invalid_certs(true)
         .build()
         .map_err(|e| e.to_string())?;
 
-    let api = Qbit::new_with_client(domain, credential, http_client);
-    let login_res = api.login(true).await;
-    if let Ok(_) = login_res {
-        let mut client = CLIENT.lock().await;
-        *client = Some(api);
-        Ok("Login successful".to_string())
-    } else {
-        let err = login_res.err();
-        if let Some(e) = &err {
-            Err(e.to_string())
-        } else {
-            Err("Login failed: Unknown error".to_string())
-        }
-    }
+    let credential = Credential::new(username, password);
+    let api = Qbit::new_with_client(actual_domain.as_str(), credential, http_client);
+    api.login(true).await.map_err(|e| e.to_string())?;
+
+    let mut client = CLIENT.lock().await;
+    *client = Some(api);
+    Ok("Login successful".to_string())
 }
 
 #[tauri::command]
