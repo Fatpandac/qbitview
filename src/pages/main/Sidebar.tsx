@@ -13,11 +13,18 @@ interface SidebarProps {
 export function Sidebar({ version, filter, onFilterChange, transferInfo }: SidebarProps) {
   return (
     <aside className="w-44 shrink-0 flex flex-col border-r bg-muted/30">
-      <div className="px-4 py-3 border-b">
-        <h1 className="font-bold text-base tracking-tight">qBitView</h1>
-        {version && (
-          <p className="text-xs text-muted-foreground mt-0.5">{version}</p>
-        )}
+      {/* Draggable title bar zone — sits over the macOS traffic lights area */}
+      <div
+        data-tauri-drag-region
+        className="shrink-0 border-b select-none"
+        style={{ height: "52px", WebkitAppRegion: "drag" } as React.CSSProperties}
+      >
+        <div className="flex flex-col justify-end h-full px-4 pb-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <h1 className="font-bold text-sm tracking-tight leading-none">qBitView</h1>
+          {version && (
+            <p className="text-xs text-muted-foreground mt-0.5">{version}</p>
+          )}
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2">
