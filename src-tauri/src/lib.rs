@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use qbit_rs::model::{AddTorrentArg, Credential, GetTorrentListArg, TorrentFile, TorrentFilter, TorrentSource};
 use qbit_rs::Qbit;
+use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::Serialize;
 use tauri::async_runtime::Mutex;
 use std::sync::Arc;
@@ -20,11 +21,22 @@ struct TransferInfoResponse {
 #[tauri::command]
 async fn login(username: &str, password: &str, domain: &str) -> Result<String, String> {
     let credential = Credential::new(username, password);
-    let api = Qbit::new(domain, credential);
+
+    // Build a client with Origin header to satisfy qBittorrent's CSRF check
+    let origin = HeaderValue::from_str(domain).map_err(|e| e.to_string())?;
+    let mut default_headers = HeaderMap::new();
+    default_headers.insert(header::ORIGIN, origin.clone());
+    default_headers.insert(header::REFERER, origin);
+    let http_client = reqwest::Client::builder()
+        .default_headers(default_headers)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let api = Qbit::new_with_client(domain, credential, http_client);
     let login_res = api.login(true).await;
     if let Ok(_) = login_res {
         let mut client = CLIENT.lock().await;
-        *client = Some(api.clone());
+        *client = Some(api);
         Ok("Login successful".to_string())
     } else {
         let err = login_res.err();
