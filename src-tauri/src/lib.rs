@@ -324,6 +324,73 @@ fn read_file(path: String) -> Result<Vec<u8>, String> {
     std::fs::read(&path).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn get_torrent_trackers(hash: String) -> Result<serde_json::Value, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let trackers = c.api.get_torrent_trackers(&hash).await.map_err(|e| e.to_string())?;
+        let arr: Vec<serde_json::Value> = trackers.iter().map(|t| serde_json::json!({
+            "url": t.url,
+            "status": format!("{:?}", t.status),
+            "tier": t.tier,
+            "num_peers": t.num_peers,
+            "num_seeds": t.num_seeds,
+            "num_leeches": t.num_leeches,
+            "num_downloaded": t.num_downloaded,
+            "msg": t.msg,
+        })).collect();
+        Ok(serde_json::Value::Array(arr))
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_torrent_peers(hash: String) -> Result<serde_json::Value, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let data = c.api.get_torrent_peers(&hash, None).await.map_err(|e| e.to_string())?;
+        let peers: Vec<serde_json::Value> = data.peers.unwrap_or_default().into_iter().map(|(addr, p)| serde_json::json!({
+            "ip": p.ip.unwrap_or_else(|| addr.ip().to_string()),
+            "port": p.port.unwrap_or(addr.port()),
+            "client": p.client,
+            "connection": p.connection,
+            "country": p.country,
+            "flags": p.flags,
+            "progress": p.progress,
+            "dl_speed": p.dl_speed,
+            "up_speed": p.up_speed,
+            "downloaded": p.downloaded,
+            "uploaded": p.uploaded,
+        })).collect();
+        Ok(serde_json::Value::Array(peers))
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_torrent_web_seeds(hash: String) -> Result<Vec<String>, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let seeds = c.api.get_torrent_web_seeds(&hash).await.map_err(|e| e.to_string())?;
+        Ok(seeds.into_iter().map(|s| s.url.to_string()).collect())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_torrent_contents(hash: String) -> Result<serde_json::Value, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let contents = c.api.get_torrent_contents(&hash, None).await.map_err(|e| e.to_string())?;
+        serde_json::to_value(contents).map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -341,6 +408,10 @@ pub fn run() {
             get_torrent_properties,
             get_torrent_pieces_states,
             read_file,
+            get_torrent_trackers,
+            get_torrent_peers,
+            get_torrent_web_seeds,
+            get_torrent_contents,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

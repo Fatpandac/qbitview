@@ -60,6 +60,41 @@ export interface TransferInfo {
   dht_nodes: number;
 }
 
+export interface TorrentTracker {
+  url: string;
+  status: string;
+  tier: number;
+  num_peers: number;
+  num_seeds: number;
+  num_leeches: number;
+  num_downloaded: number;
+  msg: string;
+}
+
+export interface TorrentPeer {
+  ip: string;
+  port: number;
+  client?: string;
+  connection?: string;
+  country?: string;
+  flags?: string;
+  progress?: number;
+  dl_speed?: number;
+  up_speed?: number;
+  downloaded?: number;
+  uploaded?: number;
+}
+
+export interface TorrentContent {
+  index: number;
+  name: string;
+  size: number;
+  progress: number;
+  priority: number;
+  is_seed?: boolean;
+  availability: number;
+}
+
 export type FilterKey =
   | "all"
   | "downloading"
