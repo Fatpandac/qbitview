@@ -222,7 +222,10 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
   const [webseeds, setWebseeds] = useState<string[]>([]);
   const [contents, setContents] = useState<TorrentContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem("drawer-width");
+    return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(saved))) : DEFAULT_WIDTH;
+  });
   const piecesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
@@ -237,7 +240,11 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     const onMouseMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
       const delta = startX.current - ev.clientX;
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta)));
+      setWidth(_ => {
+          const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + delta));
+          localStorage.setItem("drawer-width", String(next));
+          return next;
+        });
     };
     const onMouseUp = () => {
       dragging.current = false;
