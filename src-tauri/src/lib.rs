@@ -6,8 +6,14 @@ use serde::Serialize;
 use tauri::async_runtime::Mutex;
 use std::sync::Arc;
 
+struct AppClient {
+    api: Qbit,
+    http: reqwest::Client,
+    base_url: String,
+}
+
 // global client
-static CLIENT: Lazy<Arc<Mutex<Option<Qbit>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
+static CLIENT: Lazy<Arc<Mutex<Option<AppClient>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
 
 #[derive(Serialize)]
 struct TransferInfoResponse {
@@ -61,19 +67,19 @@ async fn login(username: &str, password: &str, domain: &str) -> Result<String, S
         .map_err(|e| e.to_string())?;
 
     let credential = Credential::new(username, password);
-    let api = Qbit::new_with_client(actual_domain.as_str(), credential, http_client);
+    let api = Qbit::new_with_client(actual_domain.as_str(), credential, http_client.clone());
     api.login(true).await.map_err(|e| e.to_string())?;
 
     let mut client = CLIENT.lock().await;
-    *client = Some(api);
+    *client = Some(AppClient { api, http: http_client, base_url: actual_domain });
     Ok("Login successful".to_string())
 }
 
 #[tauri::command]
 async fn get_version() -> Result<String, String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        api.get_version().await.map_err(|e| e.to_string())
+    if let Some(ref c) = *client {
+        c.api.get_version().await.map_err(|e| e.to_string())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -82,7 +88,7 @@ async fn get_version() -> Result<String, String> {
 #[tauri::command]
 async fn get_torrents(filter: Option<String>) -> Result<serde_json::Value, String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
+    if let Some(ref c) = *client {
         let torrent_filter = match filter.as_deref() {
             Some("downloading") => Some(TorrentFilter::Downloading),
             Some("completed") => Some(TorrentFilter::Completed),
@@ -97,18 +103,43 @@ async fn get_torrents(filter: Option<String>) -> Result<serde_json::Value, Strin
             filter: torrent_filter,
             ..Default::default()
         };
-        let torrents = api.get_torrent_list(arg).await.map_err(|e| e.to_string())?;
+        let torrents = c.api.get_torrent_list(arg).await.map_err(|e| e.to_string())?;
         serde_json::to_value(torrents).map_err(|e| e.to_string())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
 }
 
+// Post hashes to a legacy endpoint (qBittorrent < 5.0 uses pause/resume instead of stop/start)
+async fn post_hashes(http: &reqwest::Client, base_url: &str, endpoint: &str, cookie: &str, hashes: Vec<String>) -> Result<(), String> {
+    let url = format!("{}/api/v2/{}", base_url, endpoint);
+    let body = format!("hashes={}", hashes.join("|"));
+    let resp = http
+        .post(&url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .header("Cookie", cookie)
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if resp.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Request failed: {}", resp.status()))
+    }
+}
+
 #[tauri::command]
 async fn stop_torrents(hashes: Vec<String>) -> Result<(), String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        api.stop_torrents(hashes).await.map_err(|e| e.to_string())
+    if let Some(ref c) = *client {
+        // Try the v5 endpoint first; fall back to v4 pause on failure
+        if c.api.stop_torrents(hashes.clone()).await.is_ok() {
+            Ok(())
+        } else {
+            let cookie = c.api.get_cookie().await.unwrap_or_default();
+            post_hashes(&c.http, &c.base_url, "torrents/pause", &cookie, hashes).await
+        }
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -117,8 +148,14 @@ async fn stop_torrents(hashes: Vec<String>) -> Result<(), String> {
 #[tauri::command]
 async fn start_torrents(hashes: Vec<String>) -> Result<(), String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        api.start_torrents(hashes).await.map_err(|e| e.to_string())
+    if let Some(ref c) = *client {
+        // Try the v5 endpoint first; fall back to v4 resume on failure
+        if c.api.start_torrents(hashes.clone()).await.is_ok() {
+            Ok(())
+        } else {
+            let cookie = c.api.get_cookie().await.unwrap_or_default();
+            post_hashes(&c.http, &c.base_url, "torrents/resume", &cookie, hashes).await
+        }
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -127,8 +164,8 @@ async fn start_torrents(hashes: Vec<String>) -> Result<(), String> {
 #[tauri::command]
 async fn delete_torrents(hashes: Vec<String>, delete_files: bool) -> Result<(), String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        api.delete_torrents(hashes, delete_files).await.map_err(|e| e.to_string())
+    if let Some(ref c) = *client {
+        c.api.delete_torrents(hashes, delete_files).await.map_err(|e| e.to_string())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -142,7 +179,7 @@ async fn add_torrent_urls(
     paused: Option<bool>,
 ) -> Result<(), String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
+    if let Some(ref c) = *client {
         let url_list: Result<Vec<url::Url>, _> = urls.iter().map(|u| u.parse()).collect();
         let url_list = url_list.map_err(|e: url::ParseError| e.to_string())?;
         let arg = AddTorrentArg {
@@ -154,7 +191,7 @@ async fn add_torrent_urls(
             paused: paused.map(|p| if p { "true".to_string() } else { "false".to_string() }),
             ..Default::default()
         };
-        api.add_torrent(arg).await.map_err(|e| e.to_string())
+        c.api.add_torrent(arg).await.map_err(|e| e.to_string())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -169,7 +206,7 @@ async fn add_torrent_file(
     paused: Option<bool>,
 ) -> Result<(), String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
+    if let Some(ref c) = *client {
         let arg = AddTorrentArg {
             source: TorrentSource::TorrentFiles {
                 torrents: vec![TorrentFile { filename, data }],
@@ -179,7 +216,7 @@ async fn add_torrent_file(
             paused: paused.map(|p| if p { "true".to_string() } else { "false".to_string() }),
             ..Default::default()
         };
-        api.add_torrent(arg).await.map_err(|e| e.to_string())
+        c.api.add_torrent(arg).await.map_err(|e| e.to_string())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -188,8 +225,8 @@ async fn add_torrent_file(
 #[tauri::command]
 async fn get_transfer_info() -> Result<TransferInfoResponse, String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        let info = api.get_transfer_info().await.map_err(|e| e.to_string())?;
+    if let Some(ref c) = *client {
+        let info = c.api.get_transfer_info().await.map_err(|e| e.to_string())?;
         Ok(TransferInfoResponse {
             dl_info_speed: info.dl_info_speed,
             up_info_speed: info.up_info_speed,
@@ -205,8 +242,8 @@ async fn get_transfer_info() -> Result<TransferInfoResponse, String> {
 #[tauri::command]
 async fn get_torrent_properties(hash: String) -> Result<serde_json::Value, String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        let p = api.get_torrent_properties(&hash).await.map_err(|e| e.to_string())?;
+    if let Some(ref c) = *client {
+        let p = c.api.get_torrent_properties(&hash).await.map_err(|e| e.to_string())?;
         Ok(serde_json::json!({
             "save_path": p.save_path,
             "creation_date": p.creation_date,
@@ -250,8 +287,8 @@ async fn get_torrent_properties(hash: String) -> Result<serde_json::Value, Strin
 #[tauri::command]
 async fn get_torrent_pieces_states(hash: String) -> Result<Vec<u8>, String> {
     let client = CLIENT.lock().await;
-    if let Some(ref api) = *client {
-        let states = api.get_torrent_pieces_states(&hash).await.map_err(|e| e.to_string())?;
+    if let Some(ref c) = *client {
+        let states = c.api.get_torrent_pieces_states(&hash).await.map_err(|e| e.to_string())?;
         Ok(states.iter().map(|s| *s as u8).collect())
     } else {
         Err("Client not initialized. Please login first.".to_string())
