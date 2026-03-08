@@ -45,6 +45,28 @@ export function formatEta(eta?: number): string {
   return `${s}s`;
 }
 
+export function filterTorrents(torrents: import("./types").Torrent[], key: import("./types").FilterKey) {
+  if (key === "all") return torrents;
+  return torrents.filter((t) => {
+    const s = t.state ?? "";
+    switch (key) {
+      case "downloading": return ["downloading","forcedDL","metaDL"].includes(s);
+      case "completed":   return ["pausedUP","stoppedUP","uploading","forcedUP"].includes(s);
+      case "paused":      return ["pausedDL","stoppedDL","pausedUP","stoppedUP"].includes(s);
+      case "active":      return (t.dlspeed ?? 0) > 0 || (t.upspeed ?? 0) > 0;
+      case "inactive":    return (t.dlspeed ?? 0) === 0 && (t.upspeed ?? 0) === 0;
+      case "stalled":     return ["stalledDL","stalledUP"].includes(s);
+      case "errored":     return ["error","missingFiles"].includes(s);
+      default:            return true;
+    }
+  });
+}
+
+export function countByFilter(torrents: import("./types").Torrent[]): Record<import("./types").FilterKey, number> {
+  const keys: import("./types").FilterKey[] = ["all","downloading","completed","paused","active","inactive","stalled","errored"];
+  return Object.fromEntries(keys.map((k) => [k, filterTorrents(torrents, k).length])) as Record<import("./types").FilterKey, number>;
+}
+
 export function getStateLabel(state?: string): { label: string; color: string } {
   switch (state) {
     case "downloading":

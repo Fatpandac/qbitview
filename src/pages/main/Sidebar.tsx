@@ -6,11 +6,12 @@ import { FILTERS, formatSpeed } from "./utils";
 interface SidebarProps {
   version: string;
   filter: FilterKey;
+  counts: Record<FilterKey, number>;
   onFilterChange: (key: FilterKey) => void;
   transferInfo: TransferInfo | null;
 }
 
-export function Sidebar({ version, filter, onFilterChange, transferInfo }: SidebarProps) {
+export function Sidebar({ version, filter, counts, onFilterChange, transferInfo }: SidebarProps) {
   return (
     <aside className="w-44 shrink-0 flex flex-col border-r bg-muted/30">
       {/* Draggable title bar zone */}
@@ -42,7 +43,17 @@ export function Sidebar({ version, filter, onFilterChange, transferInfo }: Sideb
             )}
           >
             {icon}
-            {label}
+            <span className="flex-1 text-left">{label}</span>
+            {counts[key] > 0 && (
+              <span className={cn(
+                "text-xs tabular-nums rounded-full px-1.5 py-0.5 leading-none",
+                filter === key
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground",
+              )}>
+                {counts[key]}
+              </span>
+            )}
           </button>
         ))}
       </nav>

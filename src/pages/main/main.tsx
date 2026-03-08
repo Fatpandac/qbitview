@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
 import { FilterKey, Torrent, TransferInfo } from "./types";
 import { Sidebar } from "./Sidebar";
@@ -10,6 +10,7 @@ import { StatusBar } from "./StatusBar";
 import { AddTorrentModal } from "./AddTorrentModal";
 import { DeleteModal } from "./DeleteModal";
 import { TorrentDrawer } from "./TorrentDrawer";
+import { countByFilter, filterTorrents } from "./utils";
 
 function Main() {
   const [version, setVersion] = useState("");
@@ -60,9 +61,8 @@ function Main() {
 
   async function fetchData() {
     try {
-      const filterArg = filter === "all" ? null : filter;
       const [ts, ti] = await Promise.all([
-        invoke<Torrent[]>("get_torrents", { filter: filterArg }),
+        invoke<Torrent[]>("get_torrents", { filter: null }),
         invoke<TransferInfo>("get_transfer_info"),
       ]);
       setTorrents(ts);
@@ -81,13 +81,15 @@ function Main() {
   }, []);
 
   useEffect(() => {
-    setSelected(new Set());
     fetchData();
     intervalRef.current = setInterval(fetchData, 2000);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [filter]);
+  }, []);
+
+  const counts = useMemo(() => countByFilter(torrents), [torrents]);
+  const filteredTorrents = useMemo(() => filterTorrents(torrents, filter), [torrents, filter]);
 
   function toggleSelect(hash: string) {
     setSelected((prev) => {
@@ -98,7 +100,7 @@ function Main() {
   }
 
   function selectAll(checked: boolean) {
-    setSelected(checked ? new Set(torrents.map((t) => t.hash ?? "")) : new Set());
+    setSelected(checked ? new Set(filteredTorrents.map((t) => t.hash ?? "")) : new Set());
   }
 
   const selectedHashes = Array.from(selected);
@@ -140,13 +142,14 @@ function Main() {
       <Sidebar
         version={version}
         filter={filter}
+        counts={counts}
         onFilterChange={setFilter}
         transferInfo={transferInfo}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <Toolbar
-          totalCount={torrents.length}
+          totalCount={filteredTorrents.length}
           selectedCount={selectedHashes.length}
           onAdd={() => { setDropFile(null); setShowAddModal(true); }}
           onPause={handleStop}
@@ -154,7 +157,7 @@ function Main() {
           onDelete={() => setShowDeleteModal(true)}
         />
         <TorrentTable
-          torrents={torrents}
+          torrents={filteredTorrents}
           selected={selected}
           activeTorrentHash={activeTorrent?.hash}
           onToggleSelect={(hash) => toggleSelect(hash)}
