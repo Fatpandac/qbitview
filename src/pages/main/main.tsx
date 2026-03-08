@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -10,9 +11,12 @@ import {
   CircleXIcon,
   DownloadIcon,
   HardDriveIcon,
+  LinkIcon,
   NetworkIcon,
+  PlusIcon,
   Trash2Icon,
   TriangleAlertIcon,
+  UploadIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -146,6 +150,16 @@ function Main() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteFiles, setDeleteFiles] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addTab, setAddTab] = useState<"url" | "file">("url");
+  const [addUrl, setAddUrl] = useState("");
+  const [addFile, setAddFile] = useState<File | null>(null);
+  const [addSavepath, setAddSavepath] = useState("");
+  const [addCategory, setAddCategory] = useState("");
+  const [addPaused, setAddPaused] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchData() {
@@ -216,6 +230,40 @@ function Main() {
     fetchData();
   }
 
+  async function handleAdd() {
+    setAddError("");
+    setAddLoading(true);
+    try {
+      const savepath = addSavepath.trim() || null;
+      const category = addCategory.trim() || null;
+      const paused = addPaused || null;
+
+      if (addTab === "url") {
+        const urls = addUrl.split("\n").map((u) => u.trim()).filter(Boolean);
+        if (!urls.length) { setAddError("Please enter at least one URL or magnet link."); return; }
+        await invoke("add_torrent_urls", { urls, savepath, category, paused });
+      } else {
+        if (!addFile) { setAddError("Please select a .torrent file."); return; }
+        const buffer = await addFile.arrayBuffer();
+        const data = Array.from(new Uint8Array(buffer));
+        await invoke("add_torrent_file", { filename: addFile.name, data, savepath, category, paused });
+      }
+
+      setShowAddModal(false);
+      setAddUrl("");
+      setAddFile(null);
+      setAddSavepath("");
+      setAddCategory("");
+      setAddPaused(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      fetchData();
+    } catch (e) {
+      setAddError(String(e));
+    } finally {
+      setAddLoading(false);
+    }
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
@@ -264,6 +312,14 @@ function Main() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center gap-2 px-4 py-2 border-b shrink-0">
+          <Button
+            size="sm"
+            onClick={() => { setAddError(""); setShowAddModal(true); }}
+          >
+            <PlusIcon className="size-4" />
+            Add
+          </Button>
+          <div className="w-px h-5 bg-border mx-1" />
           <Button
             size="sm"
             variant="outline"
@@ -403,6 +459,145 @@ function Main() {
           </div>
         )}
       </div>
+
+      {/* Add Torrent modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowAddModal(false)}
+        >
+          <div
+            className="bg-background rounded-lg shadow-xl border w-[480px] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b flex items-center justify-between">
+              <h2 className="font-semibold text-base">Add Torrent</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <CircleXIcon className="size-5" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b">
+              <button
+                onClick={() => setAddTab("url")}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-2.5 text-sm border-b-2 transition-colors",
+                  addTab === "url"
+                    ? "border-primary text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <LinkIcon className="size-4" />
+                URL / Magnet
+              </button>
+              <button
+                onClick={() => setAddTab("file")}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-2.5 text-sm border-b-2 transition-colors",
+                  addTab === "file"
+                    ? "border-primary text-foreground font-medium"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <UploadIcon className="size-4" />
+                Torrent File
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {addTab === "url" ? (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">URLs / Magnet Links</label>
+                  <textarea
+                    value={addUrl}
+                    onChange={(e) => setAddUrl(e.target.value)}
+                    placeholder={"magnet:?xt=urn:btih:...\nhttps://example.com/file.torrent"}
+                    rows={4}
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                  />
+                  <p className="text-xs text-muted-foreground">One URL or magnet link per line</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Torrent File</label>
+                  <div
+                    className={cn(
+                      "border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors hover:border-primary hover:bg-muted/30",
+                      addFile && "border-primary bg-muted/20",
+                    )}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <UploadIcon className="size-8 mx-auto mb-2 text-muted-foreground" />
+                    {addFile ? (
+                      <p className="text-sm font-medium">{addFile.name}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Click to select a <span className="font-medium">.torrent</span> file
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".torrent"
+                    className="hidden"
+                    onChange={(e) => setAddFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+              )}
+
+              {/* Options */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Save Path</label>
+                  <Input
+                    value={addSavepath}
+                    onChange={(e) => setAddSavepath(e.target.value)}
+                    placeholder="Default"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">Category</label>
+                  <Input
+                    value={addCategory}
+                    onChange={(e) => setAddCategory(e.target.value)}
+                    placeholder="None"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={addPaused}
+                  onChange={(e) => setAddPaused(e.target.checked)}
+                  className="rounded"
+                />
+                Add in paused state
+              </label>
+
+              {addError && (
+                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                  {addError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end px-5 py-4 border-t bg-muted/20">
+              <Button variant="outline" onClick={() => setShowAddModal(false)} disabled={addLoading}>
+                Cancel
+              </Button>
+              <Button onClick={handleAdd} disabled={addLoading}>
+                {addLoading ? "Adding…" : "Add Torrent"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteModal && (

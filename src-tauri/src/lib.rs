@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use qbit_rs::model::{Credential, GetTorrentListArg, TorrentFilter};
+use qbit_rs::model::{AddTorrentArg, Credential, GetTorrentListArg, TorrentFile, TorrentFilter, TorrentSource};
 use qbit_rs::Qbit;
 use serde::Serialize;
 use tauri::async_runtime::Mutex;
@@ -102,6 +102,57 @@ async fn delete_torrents(hashes: Vec<String>, delete_files: bool) -> Result<(), 
 }
 
 #[tauri::command]
+async fn add_torrent_urls(
+    urls: Vec<String>,
+    savepath: Option<String>,
+    category: Option<String>,
+    paused: Option<bool>,
+) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref api) = *client {
+        let url_list: Result<Vec<url::Url>, _> = urls.iter().map(|u| u.parse()).collect();
+        let url_list = url_list.map_err(|e: url::ParseError| e.to_string())?;
+        let arg = AddTorrentArg {
+            source: TorrentSource::Urls {
+                urls: url_list.into(),
+            },
+            savepath,
+            category,
+            paused: paused.map(|p| if p { "true".to_string() } else { "false".to_string() }),
+            ..Default::default()
+        };
+        api.add_torrent(arg).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn add_torrent_file(
+    filename: String,
+    data: Vec<u8>,
+    savepath: Option<String>,
+    category: Option<String>,
+    paused: Option<bool>,
+) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref api) = *client {
+        let arg = AddTorrentArg {
+            source: TorrentSource::TorrentFiles {
+                torrents: vec![TorrentFile { filename, data }],
+            },
+            savepath,
+            category,
+            paused: paused.map(|p| if p { "true".to_string() } else { "false".to_string() }),
+            ..Default::default()
+        };
+        api.add_torrent(arg).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
 async fn get_transfer_info() -> Result<TransferInfoResponse, String> {
     let client = CLIENT.lock().await;
     if let Some(ref api) = *client {
@@ -130,6 +181,8 @@ pub fn run() {
             start_torrents,
             delete_torrents,
             get_transfer_info,
+            add_torrent_urls,
+            add_torrent_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
