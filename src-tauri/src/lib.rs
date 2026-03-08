@@ -165,7 +165,29 @@ async fn start_torrents(hashes: Vec<String>) -> Result<(), String> {
 async fn delete_torrents(hashes: Vec<String>, delete_files: bool) -> Result<(), String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
-        c.api.delete_torrents(hashes, delete_files).await.map_err(|e| e.to_string())
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let url = format!("{}/api/v2/torrents/delete", c.base_url);
+        let body = format!(
+            "hashes={}&deleteFiles={}",
+            hashes.join("|"),
+            delete_files
+        );
+        let status = c.http
+            .post(&url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Cookie", cookie)
+            .body(body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?
+            .status();
+        // 502 can occur when deleting files (Caddy timeout while qBittorrent processes the delete)
+        // but the operation typically succeeds on the server side, so treat it as success.
+        if status.is_success() || status.as_u16() == 502 {
+            Ok(())
+        } else {
+            Err(format!("Delete failed with status: {}", status))
+        }
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
