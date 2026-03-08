@@ -19,7 +19,7 @@ export function Sidebar({ version, filter, onFilterChange, transferInfo }: Sideb
         className="shrink-0 border-b select-none"
         style={{ height: "52px", WebkitAppRegion: "drag" } as React.CSSProperties}
       >
-        <div className="flex flex-col justify-end h-full px-4 pb-2" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+        <div className="flex flex-col justify-end h-full pb-2" style={{ paddingLeft: "76px", WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <h1 className="font-bold text-sm tracking-tight leading-none">qBitView</h1>
           {version && (
             <p className="text-xs text-muted-foreground mt-0.5">{version}</p>
