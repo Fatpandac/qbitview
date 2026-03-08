@@ -9,11 +9,11 @@ import { PiecesCanvas } from "./PiecesCanvas";
 type Tab = "info" | "trackers" | "peers" | "webseeds" | "content";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "info",     label: "种子信息" },
-  { id: "trackers", label: "Tracker" },
-  { id: "peers",    label: "连接用户" },
-  { id: "webseeds", label: "HTTP 源" },
-  { id: "content",  label: "内容" },
+  { id: "info",     label: "Info" },
+  { id: "trackers", label: "Trackers" },
+  { id: "peers",    label: "Peers" },
+  { id: "webseeds", label: "HTTP Sources" },
+  { id: "content",  label: "Content" },
 ];
 
 interface TorrentDrawerProps {
