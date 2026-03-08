@@ -271,7 +271,7 @@ function Main() {
         <div className="px-4 py-3 border-b">
           <h1 className="font-bold text-base tracking-tight">qBitView</h1>
           {version && (
-            <p className="text-xs text-muted-foreground mt-0.5">v{version}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{version}</p>
           )}
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
