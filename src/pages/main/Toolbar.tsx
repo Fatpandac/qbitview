@@ -1,3 +1,4 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "@/components/ui/button";
 import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
@@ -8,6 +9,10 @@ interface ToolbarProps {
   onPause: () => void;
   onResume: () => void;
   onDelete: () => void;
+}
+
+function onDragStart(e: React.MouseEvent) {
+  if (e.buttons === 1) getCurrentWindow().startDragging();
 }
 
 export function Toolbar({
@@ -22,11 +27,11 @@ export function Toolbar({
 
   return (
     <div
-      data-tauri-drag-region
-      className="flex items-center gap-2 px-4 border-b shrink-0"
-      style={{ height: "52px", WebkitAppRegion: "drag" } as React.CSSProperties}
+      onMouseDown={onDragStart}
+      className="flex items-center gap-2 px-4 border-b shrink-0 cursor-move"
+      style={{ height: "52px" }}
     >
-      <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties} className="flex items-center gap-2">
+      <div className="flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
         <Button size="sm" onClick={onAdd}>
           <PlusIcon className="size-4" />
           Add
@@ -48,7 +53,7 @@ export function Toolbar({
         </Button>
       </div>
 
-      <span className="ml-auto text-xs text-muted-foreground" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+      <span className="ml-auto text-xs text-muted-foreground select-none">
         {totalCount} torrents
         {hasSelection && ` · ${selectedCount} selected`}
       </span>
