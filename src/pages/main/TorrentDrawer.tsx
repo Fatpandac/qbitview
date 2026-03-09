@@ -269,33 +269,34 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     setTab("info");
 
     Promise.all([
-      invoke<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }),
-      invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash }),
-      invoke<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }),
-      invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }),
-      invoke<string[]>("get_torrent_web_seeds", { hash: torrent.hash }),
-      invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }),
+      invoke<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }).catch(() => null),
+      invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash }).catch(() => []),
+      invoke<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }).catch(() => []),
+      invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }).catch(() => []),
+      invoke<string[]>("get_torrent_web_seeds", { hash: torrent.hash }).catch(() => []),
+      invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }).catch(() => []),
     ])
       .then(([props, pcs, trk, prs, ws, cnt]) => {
         if (cancelled) return;
-        setProperty(props);
-        setPieces(pcs);
-        setTrackers(trk);
-        setPeers(prs);
-        setWebseeds(ws);
-        setContents(cnt);
+        if (props) setProperty(props);
+        setPieces(pcs as number[]);
+        setTrackers(trk as TorrentTracker[]);
+        setPeers(prs as TorrentPeer[]);
+        setWebseeds(ws as string[]);
+        setContents(cnt as TorrentContent[]);
       })
-      .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false); });
 
     piecesIntervalRef.current = setInterval(async () => {
       if (cancelled) return;
       try {
-        const pcs = await invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! });
-        const prs = await invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! });
+        const [pcs, prs] = await Promise.all([
+          invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! }).catch(() => null),
+          invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! }).catch(() => null),
+        ]);
         if (cancelled) return;
-        setPieces(pcs);
-        setPeers(prs);
+        if (pcs) setPieces(pcs);
+        if (prs) setPeers(prs);
       } catch {}
     }, 3000);
 
