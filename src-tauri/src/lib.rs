@@ -428,20 +428,18 @@ async fn get_torrent_trackers(hash: String) -> Result<serde_json::Value, String>
 async fn get_torrent_peers(hash: String) -> Result<serde_json::Value, String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
-        let data = c.api.get_torrent_peers(&hash, None).await.map_err(|e| e.to_string())?;
-        let peers: Vec<serde_json::Value> = data.peers.unwrap_or_default().into_iter().map(|(addr, p)| serde_json::json!({
-            "ip": p.ip.unwrap_or_else(|| addr.ip().to_string()),
-            "port": p.port.unwrap_or(addr.port()),
-            "client": p.client,
-            "connection": p.connection,
-            "country": p.country,
-            "flags": p.flags,
-            "progress": p.progress,
-            "dl_speed": p.dl_speed,
-            "up_speed": p.up_speed,
-            "downloaded": p.downloaded,
-            "uploaded": p.uploaded,
-        })).collect();
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let url = format!("{}/api/v2/sync/torrentPeers?hash={}&rid=0", c.base_url, hash);
+        let text = c.http.get(&url)
+            .header("Cookie", cookie)
+            .send().await.map_err(|e| e.to_string())?
+            .text().await.map_err(|e| e.to_string())?;
+        let val: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::json!({"peers": {}}));
+        // peers is a map of "ip:port" -> peer object; convert to array
+        let peers: Vec<serde_json::Value> = val["peers"]
+            .as_object()
+            .map(|m| m.values().cloned().collect())
+            .unwrap_or_default();
         Ok(serde_json::Value::Array(peers))
     } else {
         Err("Client not initialized. Please login first.".to_string())
@@ -452,8 +450,14 @@ async fn get_torrent_peers(hash: String) -> Result<serde_json::Value, String> {
 async fn get_torrent_web_seeds(hash: String) -> Result<Vec<String>, String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
-        let seeds = c.api.get_torrent_web_seeds(&hash).await.map_err(|e| e.to_string())?;
-        Ok(seeds.into_iter().map(|s| s.url.to_string()).collect())
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let url = format!("{}/api/v2/torrents/webseeds?hash={}", c.base_url, hash);
+        let text = c.http.get(&url)
+            .header("Cookie", cookie)
+            .send().await.map_err(|e| e.to_string())?
+            .text().await.map_err(|e| e.to_string())?;
+        let val: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap_or_default();
+        Ok(val.into_iter().filter_map(|v| v["url"].as_str().map(|s| s.to_string())).collect())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
