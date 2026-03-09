@@ -27,6 +27,8 @@ function Main() {
   const [globalDlLimit, setGlobalDlLimit] = useState(0);
   const [globalUpLimit, setGlobalUpLimit] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeTorrentRef = useRef<Torrent | null>(null);
+  activeTorrentRef.current = activeTorrent;
 
   // Listen to Tauri's native file-drop event (browser drag events are intercepted by the webview)
   useEffect(() => {
@@ -80,8 +82,9 @@ function Main() {
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
-      if (activeTorrent) {
-        const updated = ts.find((t) => t.hash === activeTorrent.hash);
+      const active = activeTorrentRef.current;
+      if (active) {
+        const updated = ts.find((t) => t.hash === active.hash);
         if (updated) setActiveTorrent(updated);
       }
     } catch (e) {

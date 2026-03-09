@@ -257,6 +257,8 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
 
   useEffect(() => {
     if (!torrent.hash) return;
+    let cancelled = false;
+
     setLoading(true);
     setProperty(null);
     setPieces([]);
@@ -275,6 +277,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }),
     ])
       .then(([props, pcs, trk, prs, ws, cnt]) => {
+        if (cancelled) return;
         setProperty(props);
         setPieces(pcs);
         setTrackers(trk);
@@ -283,18 +286,21 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
         setContents(cnt);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
 
     piecesIntervalRef.current = setInterval(async () => {
+      if (cancelled) return;
       try {
         const pcs = await invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! });
-        setPieces(pcs);
         const prs = await invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! });
+        if (cancelled) return;
+        setPieces(pcs);
         setPeers(prs);
       } catch {}
     }, 3000);
 
     return () => {
+      cancelled = true;
       if (piecesIntervalRef.current) clearInterval(piecesIntervalRef.current);
     };
   }, [torrent.hash]);
