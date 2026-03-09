@@ -14,6 +14,8 @@ export interface Torrent {
   uploaded?: number;
   ratio?: number;
   added_on?: number;
+  dl_limit?: number;
+  up_limit?: number;
 }
 
 export interface TorrentProperty {

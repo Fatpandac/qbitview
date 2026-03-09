@@ -6,7 +6,7 @@ import {
   Trash2Icon,
   RefreshCwIcon,
   RadioIcon,
-  GaugeIcon,
+  CheckIcon,
   ArrowDownIcon,
   ArrowUpIcon,
 } from "lucide-react";
@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Torrent } from "./types";
+import { formatSpeed } from "./utils";
 
 interface TorrentContextMenuProps {
   torrent: Torrent;
@@ -41,12 +42,21 @@ interface TorrentContextMenuProps {
 
 const SPEED_PRESETS = [
   { label: "Unlimited", value: 0 },
-  { label: "100 KB/s", value: 100 * 1024 },
-  { label: "500 KB/s", value: 500 * 1024 },
-  { label: "1 MB/s",  value: 1024 * 1024 },
-  { label: "5 MB/s",  value: 5 * 1024 * 1024 },
-  { label: "10 MB/s", value: 10 * 1024 * 1024 },
+  { label: "100 KB/s",  value: 100 * 1024 },
+  { label: "500 KB/s",  value: 500 * 1024 },
+  { label: "1 MB/s",   value: 1024 * 1024 },
+  { label: "5 MB/s",   value: 5 * 1024 * 1024 },
+  { label: "10 MB/s",  value: 10 * 1024 * 1024 },
 ];
+
+function isPreset(value: number) {
+  return SPEED_PRESETS.some((p) => p.value === value);
+}
+
+function formatLimit(bytes: number) {
+  if (bytes <= 0) return "∞";
+  return formatSpeed(bytes);
+}
 
 type SpeedType = "download" | "upload";
 
@@ -62,43 +72,75 @@ export function TorrentContextMenu({
   const hash = torrent.hash ?? "";
   const isPaused = ["pausedDL", "stoppedDL", "pausedUP", "stoppedUP"].includes(torrent.state ?? "");
 
+  // qBit returns -1 for "no limit"; normalise to 0
+  const dlLimit = (torrent.dl_limit ?? 0) <= 0 ? 0 : (torrent.dl_limit ?? 0);
+  const upLimit = (torrent.up_limit ?? 0) <= 0 ? 0 : (torrent.up_limit ?? 0);
+
   async function handlePause() {
     await invoke("stop_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
-
   async function handleResume() {
     await invoke("start_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
-
   async function handleRecheck() {
     await invoke("recheck_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
-
   async function handleReannounce() {
     await invoke("reannounce_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
-
   async function applySpeedLimit(type: SpeedType, bytes: number) {
     const cmd = type === "download" ? "set_torrent_download_limit" : "set_torrent_upload_limit";
     await invoke(cmd, { hashes: [hash], limit: bytes }).catch(console.error);
     onAction();
   }
-
   function openCustomSpeed(type: SpeedType) {
-    setCustomSpeed("");
+    const current = type === "download" ? dlLimit : upLimit;
+    setCustomSpeed(current > 0 ? String(Math.round(current / 1024)) : "");
     setSpeedDialog(type);
   }
-
   async function submitCustomSpeed() {
     if (!speedDialog) return;
     const kb = parseFloat(customSpeed);
     if (isNaN(kb) || kb < 0) return;
     await applySpeedLimit(speedDialog, Math.round(kb * 1024));
     setSpeedDialog(null);
+  }
+
+  function SpeedSubmenu({ type }: { type: SpeedType }) {
+    const current = type === "download" ? dlLimit : upLimit;
+    const hasCustom = current > 0 && !isPreset(current);
+    return (
+      <ContextMenuSubContent className="w-48">
+        {SPEED_PRESETS.map((p) => (
+          <ContextMenuItem key={p.value} onClick={() => applySpeedLimit(type, p.value)}>
+            <span className="w-4 shrink-0 flex items-center">
+              {current === p.value && <CheckIcon className="size-3.5" />}
+            </span>
+            {p.label}
+          </ContextMenuItem>
+        ))}
+        {hasCustom && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => applySpeedLimit(type, current)}>
+              <span className="w-4 shrink-0 flex items-center">
+                <CheckIcon className="size-3.5" />
+              </span>
+              {formatSpeed(current)}
+            </ContextMenuItem>
+          </>
+        )}
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => openCustomSpeed(type)}>
+          <span className="w-4 shrink-0" />
+          Custom…
+        </ContextMenuItem>
+      </ContextMenuSubContent>
+    );
   }
 
   return (
@@ -126,39 +168,19 @@ export function TorrentContextMenu({
           <ContextMenuSub>
             <ContextMenuSubTrigger>
               <ArrowDownIcon className="size-4 text-blue-500" />
-              Download Limit
+              <span className="flex-1">Download Limit</span>
+              <span className="text-xs text-muted-foreground">{formatLimit(dlLimit)}</span>
             </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-40">
-              {SPEED_PRESETS.map((p) => (
-                <ContextMenuItem key={p.value} onClick={() => applySpeedLimit("download", p.value)}>
-                  <GaugeIcon className="size-4" />
-                  {p.label}
-                </ContextMenuItem>
-              ))}
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={() => openCustomSpeed("download")}>
-                Custom…
-              </ContextMenuItem>
-            </ContextMenuSubContent>
+            <SpeedSubmenu type="download" />
           </ContextMenuSub>
 
           <ContextMenuSub>
             <ContextMenuSubTrigger>
               <ArrowUpIcon className="size-4 text-green-500" />
-              Upload Limit
+              <span className="flex-1">Upload Limit</span>
+              <span className="text-xs text-muted-foreground">{formatLimit(upLimit)}</span>
             </ContextMenuSubTrigger>
-            <ContextMenuSubContent className="w-40">
-              {SPEED_PRESETS.map((p) => (
-                <ContextMenuItem key={p.value} onClick={() => applySpeedLimit("upload", p.value)}>
-                  <GaugeIcon className="size-4" />
-                  {p.label}
-                </ContextMenuItem>
-              ))}
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={() => openCustomSpeed("upload")}>
-                Custom…
-              </ContextMenuItem>
-            </ContextMenuSubContent>
+            <SpeedSubmenu type="upload" />
           </ContextMenuSub>
 
           <ContextMenuSeparator />
@@ -181,7 +203,6 @@ export function TorrentContextMenu({
         </ContextMenuContent>
       </ContextMenu>
 
-      {/* Custom speed dialog */}
       <Dialog open={speedDialog !== null} onOpenChange={(o) => !o && setSpeedDialog(null)}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
