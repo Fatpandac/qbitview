@@ -62,17 +62,24 @@ function Main() {
     return () => { unlisten?.(); };
   }, []);
 
+  async function fetchGlobalLimits() {
+    try {
+      const gl = await invoke<{ dl_limit: number; up_limit: number }>("get_global_speed_limits");
+      setGlobalDlLimit(gl.dl_limit > 0 ? gl.dl_limit : 0);
+      setGlobalUpLimit(gl.up_limit > 0 ? gl.up_limit : 0);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   async function fetchData() {
     try {
-      const [ts, ti, gl] = await Promise.all([
+      const [ts, ti] = await Promise.all([
         invoke<Torrent[]>("get_torrents", { filter: null }),
         invoke<TransferInfo>("get_transfer_info"),
-        invoke<{ dl_limit: number; up_limit: number }>("get_global_speed_limits"),
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
-      setGlobalDlLimit(gl.dl_limit > 0 ? gl.dl_limit : 0);
-      setGlobalUpLimit(gl.up_limit > 0 ? gl.up_limit : 0);
       if (activeTorrent) {
         const updated = ts.find((t) => t.hash === activeTorrent.hash);
         if (updated) setActiveTorrent(updated);
@@ -84,6 +91,7 @@ function Main() {
 
   useEffect(() => {
     invoke<string>("get_version").then(setVersion).catch(console.error);
+    fetchGlobalLimits();
   }, []);
 
   useEffect(() => {
@@ -178,6 +186,7 @@ function Main() {
           }}
           globalDlLimit={globalDlLimit}
           globalUpLimit={globalUpLimit}
+          onRefreshGlobalLimits={fetchGlobalLimits}
         />
         {transferInfo && <StatusBar transferInfo={transferInfo} />}
       </div>

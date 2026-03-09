@@ -41,6 +41,7 @@ interface TorrentContextMenuProps {
   onDelete: (torrent: Torrent) => void;
   globalDlLimit?: number;
   globalUpLimit?: number;
+  onRefreshGlobalLimits?: () => void;
 }
 
 const SPEED_PRESETS = [
@@ -103,6 +104,7 @@ export function TorrentContextMenu({
   onDelete,
   globalDlLimit = 0,
   globalUpLimit = 0,
+  onRefreshGlobalLimits,
 }: TorrentContextMenuProps) {
   const [speedDialog, setSpeedDialog] = useState<SpeedType | null>(null);
   const [customSpeed, setCustomSpeed] = useState("");
@@ -140,6 +142,7 @@ export function TorrentContextMenu({
         ? "set_torrent_download_limit"
         : "set_torrent_upload_limit";
     await invoke(cmd, { hashes: [hash], limit: bytes }).catch(console.error);
+    onRefreshGlobalLimits?.();
     // Warn if the per-torrent limit exceeds the global limit
     if (bytes > 0) {
       const globalLimit = type === "download" ? globalDlLimit : globalUpLimit;
