@@ -24,6 +24,8 @@ interface TorrentTableProps {
   onRowClick: (torrent: Torrent) => void;
   onAction: () => void;
   onDelete: (torrent: Torrent) => void;
+  globalDlLimit?: number;
+  globalUpLimit?: number;
 }
 
 export function TorrentTable({
@@ -35,6 +37,8 @@ export function TorrentTable({
   onRowClick,
   onAction,
   onDelete,
+  globalDlLimit = 0,
+  globalUpLimit = 0,
 }: TorrentTableProps) {
   const allSelected = torrents.length > 0 && torrents.every((t) => selected.has(t.hash ?? ""));
   const someSelected = !allSelected && torrents.some((t) => selected.has(t.hash ?? ""));
@@ -79,7 +83,7 @@ export function TorrentTable({
             const isActive = hash === activeTorrentHash;
             const { label, color } = getStateLabel(t.state);
             return (
-              <TorrentContextMenu key={hash} torrent={t} onAction={onAction} onDelete={onDelete}>
+              <TorrentContextMenu key={hash} torrent={t} onAction={onAction} onDelete={onDelete} globalDlLimit={globalDlLimit} globalUpLimit={globalUpLimit}>
               <tr
                 onClick={(e) => {
                   const target = e.target as HTMLElement;

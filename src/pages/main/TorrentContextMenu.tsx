@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import {
   CirclePauseIcon,
   CirclePlayIcon,
@@ -38,6 +39,8 @@ interface TorrentContextMenuProps {
   children: React.ReactNode;
   onAction: () => void;
   onDelete: (torrent: Torrent) => void;
+  globalDlLimit?: number;
+  globalUpLimit?: number;
 }
 
 const SPEED_PRESETS = [
@@ -91,11 +94,6 @@ function isPreset(value: number) {
   return SPEED_PRESETS.some((p) => p.value === value);
 }
 
-function formatLimit(bytes: number) {
-  if (bytes <= 0) return "∞";
-  return formatSpeed(bytes);
-}
-
 type SpeedType = "download" | "upload";
 
 export function TorrentContextMenu({
@@ -103,6 +101,8 @@ export function TorrentContextMenu({
   children,
   onAction,
   onDelete,
+  globalDlLimit = 0,
+  globalUpLimit = 0,
 }: TorrentContextMenuProps) {
   const [speedDialog, setSpeedDialog] = useState<SpeedType | null>(null);
   const [customSpeed, setCustomSpeed] = useState("");
@@ -140,6 +140,16 @@ export function TorrentContextMenu({
         ? "set_torrent_download_limit"
         : "set_torrent_upload_limit";
     await invoke(cmd, { hashes: [hash], limit: bytes }).catch(console.error);
+    // Warn if the per-torrent limit exceeds the global limit
+    if (bytes > 0) {
+      const globalLimit = type === "download" ? globalDlLimit : globalUpLimit;
+      if (globalLimit > 0 && bytes > globalLimit) {
+        toast.warning(
+          `${type === "download" ? "Download" : "Upload"} limit (${formatSpeed(bytes)}) exceeds the global limit (${formatSpeed(globalLimit)}). The global limit will take precedence.`,
+          { duration: 6000 }
+        );
+      }
+    }
     onAction();
   }
   function openCustomSpeed(type: SpeedType) {

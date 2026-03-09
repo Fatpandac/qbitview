@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
+import { Toaster } from "sonner";
 import { FilterKey, Torrent, TransferInfo } from "./types";
 import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
@@ -23,6 +24,8 @@ function Main() {
   const [dropFile, setDropFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [globalDlLimit, setGlobalDlLimit] = useState(0);
+  const [globalUpLimit, setGlobalUpLimit] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Listen to Tauri's native file-drop event (browser drag events are intercepted by the webview)
@@ -61,12 +64,15 @@ function Main() {
 
   async function fetchData() {
     try {
-      const [ts, ti] = await Promise.all([
+      const [ts, ti, gl] = await Promise.all([
         invoke<Torrent[]>("get_torrents", { filter: null }),
         invoke<TransferInfo>("get_transfer_info"),
+        invoke<{ dl_limit: number; up_limit: number }>("get_global_speed_limits"),
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
+      setGlobalDlLimit(gl.dl_limit > 0 ? gl.dl_limit : 0);
+      setGlobalUpLimit(gl.up_limit > 0 ? gl.up_limit : 0);
       if (activeTorrent) {
         const updated = ts.find((t) => t.hash === activeTorrent.hash);
         if (updated) setActiveTorrent(updated);
@@ -170,6 +176,8 @@ function Main() {
             setSelected(new Set([t.hash ?? ""]));
             setShowDeleteModal(true);
           }}
+          globalDlLimit={globalDlLimit}
+          globalUpLimit={globalUpLimit}
         />
         {transferInfo && <StatusBar transferInfo={transferInfo} />}
       </div>
@@ -196,6 +204,7 @@ function Main() {
           onConfirm={handleDelete}
         />
       )}
+      <Toaster position="bottom-right" richColors />
     </div>
   );
 }

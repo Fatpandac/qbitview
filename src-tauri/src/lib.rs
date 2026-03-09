@@ -361,6 +361,29 @@ async fn set_torrent_upload_limit(hashes: Vec<String>, limit: u64) -> Result<(),
 }
 
 #[tauri::command]
+async fn get_global_speed_limits() -> Result<serde_json::Value, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let dl_url = format!("{}/api/v2/transfer/downloadLimit", c.base_url);
+        let up_url = format!("{}/api/v2/transfer/uploadLimit", c.base_url);
+        let dl_resp = c.http.get(&dl_url)
+            .header("Cookie", &cookie)
+            .send().await.map_err(|e| e.to_string())?
+            .text().await.map_err(|e| e.to_string())?;
+        let up_resp = c.http.get(&up_url)
+            .header("Cookie", &cookie)
+            .send().await.map_err(|e| e.to_string())?
+            .text().await.map_err(|e| e.to_string())?;
+        let dl_limit: i64 = dl_resp.trim().parse().unwrap_or(0);
+        let up_limit: i64 = up_resp.trim().parse().unwrap_or(0);
+        Ok(serde_json::json!({ "dl_limit": dl_limit, "up_limit": up_limit }))
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
 async fn recheck_torrents(hashes: Vec<String>) -> Result<(), String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
@@ -472,6 +495,7 @@ pub fn run() {
             set_torrent_upload_limit,
             recheck_torrents,
             reannounce_torrents,
+            get_global_speed_limits,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
