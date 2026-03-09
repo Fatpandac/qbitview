@@ -328,7 +328,15 @@ fn read_file(path: String) -> Result<Vec<u8>, String> {
 async fn set_torrent_download_limit(hashes: Vec<String>, limit: u64) -> Result<(), String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
-        c.api.set_torrent_download_limit(hashes, limit).await.map_err(|e| e.to_string())
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let url = format!("{}/api/v2/torrents/downloadLimit", c.base_url);
+        let body = format!("hashes={}&limit={}", hashes.join("|"), limit);
+        c.http.post(&url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Cookie", cookie)
+            .body(body)
+            .send().await.map_err(|e| e.to_string())?;
+        Ok(())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
@@ -338,7 +346,15 @@ async fn set_torrent_download_limit(hashes: Vec<String>, limit: u64) -> Result<(
 async fn set_torrent_upload_limit(hashes: Vec<String>, limit: u64) -> Result<(), String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
-        c.api.set_torrent_upload_limit(hashes, limit).await.map_err(|e| e.to_string())
+        let cookie = c.api.get_cookie().await.unwrap_or_default();
+        let url = format!("{}/api/v2/torrents/uploadLimit", c.base_url);
+        let body = format!("hashes={}&limit={}", hashes.join("|"), limit);
+        c.http.post(&url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Cookie", cookie)
+            .body(body)
+            .send().await.map_err(|e| e.to_string())?;
+        Ok(())
     } else {
         Err("Client not initialized. Please login first.".to_string())
     }
