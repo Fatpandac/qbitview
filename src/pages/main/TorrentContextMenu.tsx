@@ -91,6 +91,11 @@ function isPreset(value: number) {
   return SPEED_PRESETS.some((p) => p.value === value);
 }
 
+function formatLimit(bytes: number) {
+  if (bytes <= 0) return "∞";
+  return formatSpeed(bytes);
+}
+
 type SpeedType = "download" | "upload";
 
 export function TorrentContextMenu({
@@ -178,6 +183,7 @@ export function TorrentContextMenu({
             <ContextMenuSubTrigger>
               <ArrowDownIcon className="size-4 text-blue-500" />
               Download Limit
+              <span className="ml-auto text-xs text-muted-foreground pl-2">{formatLimit(dlLimit)}</span>
             </ContextMenuSubTrigger>
             <SpeedSubmenu
               current={dlLimit}
@@ -190,6 +196,7 @@ export function TorrentContextMenu({
             <ContextMenuSubTrigger>
               <ArrowUpIcon className="size-4 text-green-500" />
               Upload Limit
+              <span className="ml-auto text-xs text-muted-foreground pl-2">{formatLimit(upLimit)}</span>
             </ContextMenuSubTrigger>
             <SpeedSubmenu
               current={upLimit}
