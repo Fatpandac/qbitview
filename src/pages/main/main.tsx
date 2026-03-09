@@ -165,6 +165,11 @@ function Main() {
           onRowClick={(t) =>
             setActiveTorrent((prev) => (prev?.hash === t.hash ? null : t))
           }
+          onAction={fetchData}
+          onDelete={(t) => {
+            setSelected(new Set([t.hash ?? ""]));
+            setShowDeleteModal(true);
+          }}
         />
         {transferInfo && <StatusBar transferInfo={transferInfo} />}
       </div>

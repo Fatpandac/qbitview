@@ -325,6 +325,46 @@ fn read_file(path: String) -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
+async fn set_torrent_download_limit(hashes: Vec<String>, limit: u64) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.set_torrent_download_limit(hashes, limit).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn set_torrent_upload_limit(hashes: Vec<String>, limit: u64) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.set_torrent_upload_limit(hashes, limit).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn recheck_torrents(hashes: Vec<String>) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.recheck_torrents(hashes).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn reannounce_torrents(hashes: Vec<String>) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.reannounce_torrents(hashes).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
 async fn get_torrent_trackers(hash: String) -> Result<serde_json::Value, String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
@@ -412,6 +452,10 @@ pub fn run() {
             get_torrent_peers,
             get_torrent_web_seeds,
             get_torrent_contents,
+            set_torrent_download_limit,
+            set_torrent_upload_limit,
+            recheck_torrents,
+            reannounce_torrents,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

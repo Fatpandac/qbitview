@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Torrent } from "./types";
 import { formatBytes, formatEta, formatSpeed, getStateLabel } from "./utils";
+import { TorrentContextMenu } from "./TorrentContextMenu";
 
 function ProgressBar({ value }: { value?: number }) {
   const pct = Math.min(100, Math.max(0, (value ?? 0) * 100));
@@ -21,6 +22,8 @@ interface TorrentTableProps {
   onToggleSelect: (hash: string) => void;
   onSelectAll: (checked: boolean) => void;
   onRowClick: (torrent: Torrent) => void;
+  onAction: () => void;
+  onDelete: (torrent: Torrent) => void;
 }
 
 export function TorrentTable({
@@ -30,6 +33,8 @@ export function TorrentTable({
   onToggleSelect,
   onSelectAll,
   onRowClick,
+  onAction,
+  onDelete,
 }: TorrentTableProps) {
   const allSelected = torrents.length > 0 && torrents.every((t) => selected.has(t.hash ?? ""));
   const someSelected = !allSelected && torrents.some((t) => selected.has(t.hash ?? ""));
@@ -74,10 +79,9 @@ export function TorrentTable({
             const isActive = hash === activeTorrentHash;
             const { label, color } = getStateLabel(t.state);
             return (
+              <TorrentContextMenu key={hash} torrent={t} onAction={onAction} onDelete={onDelete}>
               <tr
-                key={hash}
                 onClick={(e) => {
-                  // Don't trigger row click if clicking the checkbox cell
                   const target = e.target as HTMLElement;
                   if (target.tagName === "INPUT") return;
                   onRowClick(t);
@@ -135,6 +139,7 @@ export function TorrentTable({
                   {t.ratio != null ? t.ratio.toFixed(2) : "—"}
                 </td>
               </tr>
+              </TorrentContextMenu>
             );
           })}
         </tbody>
