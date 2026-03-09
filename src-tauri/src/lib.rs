@@ -329,7 +329,7 @@ async fn set_torrent_download_limit(hashes: Vec<String>, limit: u64) -> Result<(
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
         let cookie = c.api.get_cookie().await.unwrap_or_default();
-        let url = format!("{}/api/v2/torrents/downloadLimit", c.base_url);
+        let url = format!("{}/api/v2/torrents/setDownloadLimit", c.base_url);
         let body = format!("hashes={}&limit={}", hashes.join("|"), limit);
         c.http.post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
@@ -347,7 +347,7 @@ async fn set_torrent_upload_limit(hashes: Vec<String>, limit: u64) -> Result<(),
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
         let cookie = c.api.get_cookie().await.unwrap_or_default();
-        let url = format!("{}/api/v2/torrents/uploadLimit", c.base_url);
+        let url = format!("{}/api/v2/torrents/setUploadLimit", c.base_url);
         let body = format!("hashes={}&limit={}", hashes.join("|"), limit);
         c.http.post(&url)
             .header("Content-Type", "application/x-www-form-urlencoded")
