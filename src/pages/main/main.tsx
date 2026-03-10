@@ -12,11 +12,10 @@ import { AddTorrentModal } from "./AddTorrentModal";
 import { DeleteModal } from "./DeleteModal";
 import { TorrentDrawer } from "./TorrentDrawer";
 import { countByFilter, filterTorrents } from "./utils";
+import useMainStore from "@/sotres/main";
 
 function Main() {
-  const [version, setVersion] = useState("");
-  const [torrents, setTorrents] = useState<Torrent[]>([]);
-  const [transferInfo, setTransferInfo] = useState<TransferInfo | null>(null);
+  const { torrents, transferInfo, version, setTorrents, setTransferInfo, setVersion } = useMainStore();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeTorrent, setActiveTorrent] = useState<Torrent | null>(null);
