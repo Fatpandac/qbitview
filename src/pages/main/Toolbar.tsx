@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Settings2Icon, Trash2Icon } from "lucide-react";
+import router from "@/router";
 
 interface ToolbarProps {
   totalCount: number;
@@ -46,10 +47,16 @@ export function Toolbar({
         Delete
       </Button>
 
-      <span data-tauri-drag-region className="ml-auto text-xs text-muted-foreground select-none pointer-events-none">
-        {totalCount} torrents
-        {hasSelection && ` · ${selectedCount} selected`}
-      </span>
+      <div className="ml-auto flex items-center gap-2">
+        <Button size="sm" variant="ghost" onClick={() => router.navigate("/setting")}>
+          <Settings2Icon className="size-4" />
+          Settings
+        </Button>
+        <span data-tauri-drag-region className="text-xs text-muted-foreground select-none pointer-events-none">
+          {totalCount} torrents
+          {hasSelection && ` · ${selectedCount} selected`}
+        </span>
+      </div>
     </div>
   );
 }

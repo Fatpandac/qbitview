@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use qbit_rs::model::{AddTorrentArg, Credential, GetTorrentListArg, TorrentFile, TorrentFilter, TorrentSource};
+use qbit_rs::model::{AddTorrentArg, Credential, GetTorrentListArg, Preferences, TorrentFile, TorrentFilter, TorrentSource};
 use qbit_rs::Qbit;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::Serialize;
@@ -478,6 +478,26 @@ async fn get_torrent_contents(hash: String) -> Result<serde_json::Value, String>
     }
 }
 
+#[tauri::command]
+async fn get_preferences() -> Result<Preferences, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.get_preferences().await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
+#[tauri::command]
+async fn set_preferences(preferences: Preferences) -> Result<(), String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        c.api.set_preferences(preferences).await.map_err(|e| e.to_string())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -504,6 +524,8 @@ pub fn run() {
             recheck_torrents,
             reannounce_torrents,
             get_global_speed_limits,
+            get_preferences,
+            set_preferences,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

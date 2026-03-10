@@ -12,6 +12,10 @@ const router = createBrowserRouter([
     Component: lazy(() => import("@/pages/main/main.tsx")),
   },
   {
+    path: "/setting",
+    Component: lazy(() => import("@/pages/setting/setting.tsx")),
+  },
+  {
     path: "*",
     Component: () => (
       <div className="w-screen h-screen flex justify-center items-center">
