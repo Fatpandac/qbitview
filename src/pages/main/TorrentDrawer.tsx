@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { XIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent, TorrentContent, TorrentPeer, TorrentProperty, TorrentTracker } from "./types";
@@ -185,28 +185,105 @@ function WebSeedsPanel({ seeds }: { seeds: string[] }) {
 
 function ContentPanel({ contents }: { contents: TorrentContent[] }) {
   if (!contents.length) return <Empty msg="No files" />;
-  return (
-    <div className="space-y-1">
-      {contents.map((f) => (
-        <div key={f.index} className="rounded-md border p-2.5 space-y-1.5">
-          <p className="text-xs font-medium break-all leading-snug">{f.name}</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-secondary rounded-full h-1 overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full"
-                style={{ width: `${(f.progress * 100).toFixed(1)}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {(f.progress * 100).toFixed(1)}%
+  type TreeNode = {
+    name: string;
+    children: Map<string, TreeNode>;
+    file?: TorrentContent;
+    path: string;
+  };
+
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const root: TreeNode = { name: "", children: new Map(), path: "" };
+
+  for (const item of contents) {
+    const parts = item.name.split(/[\\/]+/).filter(Boolean);
+    let node = root;
+    parts.forEach((part, idx) => {
+      const isFile = idx === parts.length - 1;
+      if (!node.children.has(part)) {
+        const path = node.path ? `${node.path}/${part}` : part;
+        node.children.set(part, { name: part, children: new Map(), path });
+      }
+      const next = node.children.get(part)!;
+      if (isFile) next.file = item;
+      node = next;
+    });
+  }
+
+  useEffect(() => {
+    const dirs = new Set<string>();
+    root.children.forEach((child) => {
+      if (!child.file) dirs.add(child.path);
+    });
+    setExpanded(dirs);
+  }, [contents]);
+
+  const toggle = (path: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
+
+  const renderNode = (node: TreeNode, depth: number) => {
+    const entries = Array.from(node.children.values());
+    entries.sort((a, b) => {
+      const aIsFile = Boolean(a.file);
+      const bIsFile = Boolean(b.file);
+      if (aIsFile !== bIsFile) return aIsFile ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return entries.map((child) => {
+      const isFile = Boolean(child.file);
+      const key = isFile ? child.file!.index : child.path;
+      const isOpen = isFile ? true : expanded.has(child.path);
+      return (
+        <div key={key} className="space-y-1">
+          <div className="flex items-center gap-1.5 text-xs min-w-0" style={{ paddingLeft: depth * 12 }}>
+            {!isFile && (
+              <button
+                type="button"
+                onClick={() => toggle(child.path)}
+                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={isOpen ? "Collapse folder" : "Expand folder"}
+              >
+                {isOpen ? <ChevronDownIcon className="size-3" /> : <ChevronRightIcon className="size-3" />}
+              </button>
+            )}
+            <span className={cn("truncate min-w-0", isFile ? "text-foreground" : "font-medium")}>
+              {child.name}
             </span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatBytes(f.size)}
-            </span>
+            {isFile && (
+              <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                {formatBytes(child.file!.size)}
+              </span>
+            )}
           </div>
+          {isFile ? (
+            <div className="flex items-center gap-2 min-w-0" style={{ paddingLeft: depth * 12 }}>
+              <div className="flex-1 bg-secondary rounded-full h-1 overflow-hidden min-w-0">
+                <div
+                  className="h-full bg-primary rounded-full"
+                  style={{ width: `${(child.file!.progress * 100).toFixed(1)}%` }}
+                />
+              </div>
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                {(child.file!.progress * 100).toFixed(1)}%
+              </span>
+            </div>
+          ) : (
+            isOpen && renderNode(child, depth + 1)
+          )}
         </div>
-      ))}
-    </div>
+      );
+    });
+  };
+
+  return (
+    <div className="space-y-2">{renderNode(root, 0)}</div>
   );
 }
 
