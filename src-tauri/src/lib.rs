@@ -33,7 +33,9 @@ async fn login(username: &str, password: &str, domain: &str) -> Result<String, S
     // connect to the final URL directly to avoid losing the session cookie on every API call.
     let probe_client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
+        .no_proxy()
         .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -64,7 +66,9 @@ async fn login(username: &str, password: &str, domain: &str) -> Result<String, S
     default_headers.insert(header::REFERER, origin);
     let http_client = reqwest::Client::builder()
         .default_headers(default_headers)
+        .no_proxy()
         .danger_accept_invalid_certs(true)
+        .danger_accept_invalid_hostnames(true)
         .build()
         .map_err(|e| e.to_string())?;
 
