@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon, CopyIcon, XIcon } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent, TorrentContent, TorrentPeer, TorrentProperty, TorrentTracker } from "./types";
@@ -399,7 +400,27 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       <div className="flex items-start justify-between gap-2 px-4 py-3 border-b shrink-0">
         <div className="min-w-0">
           <h2 className="font-semibold text-sm leading-snug truncate select-text" title={torrent.name ?? ""}>{torrent.name ?? "—"}</h2>
-          <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{torrent.hash}</p>
+          <div className="mt-0.5 flex items-center gap-2 min-w-0">
+            <p className="text-xs text-muted-foreground font-mono truncate select-text">{torrent.hash}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                const name = torrent.name ?? "";
+                const hash = torrent.hash ?? "";
+                const text = [name, hash].filter(Boolean).join("\n");
+                if (!text) return;
+                try {
+                  await navigator.clipboard.writeText(text);
+                  toast.success("Copied name and hash");
+                } catch {}
+              }}
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Copy name and hash"
+              title="Copy name and hash"
+            >
+              <CopyIcon className="size-3.5" />
+            </button>
+          </div>
         </div>
         <button onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
           <XIcon className="size-4" />
