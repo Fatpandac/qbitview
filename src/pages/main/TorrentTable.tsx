@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent } from "./types";
 import { formatBytes, formatEta, formatSpeed, getStateLabel } from "./utils";
 import { TorrentContextMenu } from "./TorrentContextMenu";
@@ -46,7 +47,7 @@ export function TorrentTable({
   const someSelected = !allSelected && torrents.some((t) => selected.has(t.hash ?? ""));
 
   return (
-    <div className="flex-1 overflow-auto">
+    <ScrollArea className="flex-1">
       <table className="w-full text-sm border-collapse">
         <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
           <tr className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -150,6 +151,7 @@ export function TorrentTable({
           })}
         </tbody>
       </table>
-    </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }

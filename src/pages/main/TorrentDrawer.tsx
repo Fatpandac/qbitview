@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent, TorrentContent, TorrentPeer, TorrentProperty, TorrentTracker } from "./types";
 import { formatBytes, formatEta, formatSpeed } from "./utils";
 import { PiecesCanvas } from "./PiecesCanvas";
@@ -141,7 +142,7 @@ function TrackersPanel({ trackers }: { trackers: TorrentTracker[] }) {
 function PeersPanel({ peers }: { peers: TorrentPeer[] }) {
   if (!peers.length) return <Empty msg="No connected peers" />;
   return (
-    <div className="overflow-x-auto">
+    <ScrollArea className="w-full">
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="text-muted-foreground border-b">
@@ -164,7 +165,8 @@ function PeersPanel({ peers }: { peers: TorrentPeer[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 }
 
@@ -328,41 +330,46 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b shrink-0 overflow-x-auto">
-        {TABS.map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={cn(
-              "shrink-0 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
-              tab === id
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ScrollArea className="shrink-0 border-b">
+        <div className="flex">
+          {TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                "shrink-0 px-3 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap",
+                tab === id
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {loading ? (
-          <p className="text-sm text-muted-foreground text-center py-10">Loading…</p>
-        ) : tab === "info" && property ? (
-          <InfoPanel property={property} pieces={pieces} />
-        ) : tab === "trackers" ? (
-          <TrackersPanel trackers={trackers} />
-        ) : tab === "peers" ? (
-          <PeersPanel peers={peers} />
-        ) : tab === "webseeds" ? (
-          <WebSeedsPanel seeds={webseeds} />
-        ) : tab === "content" ? (
-          <ContentPanel contents={contents} />
-        ) : (
-          <Empty />
-        )}
-      </div>
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-4">
+          {loading ? (
+            <p className="text-sm text-muted-foreground text-center py-10">Loading…</p>
+          ) : tab === "info" && property ? (
+            <InfoPanel property={property} pieces={pieces} />
+          ) : tab === "trackers" ? (
+            <TrackersPanel trackers={trackers} />
+          ) : tab === "peers" ? (
+            <PeersPanel peers={peers} />
+          ) : tab === "webseeds" ? (
+            <WebSeedsPanel seeds={webseeds} />
+          ) : tab === "content" ? (
+            <ContentPanel contents={contents} />
+          ) : (
+            <Empty />
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
