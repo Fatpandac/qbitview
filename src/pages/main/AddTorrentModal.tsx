@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,25 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [savepath, setSavepath] = useState("");
+  const [defaultSavePath, setDefaultSavePath] = useState("");
   const [category, setCategory] = useState("");
   const [paused, setPaused] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    invoke<{ save_path?: string }>("get_preferences")
+      .then((prefs) => {
+        if (!active) return;
+        setDefaultSavePath(prefs.save_path ?? "");
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit() {
     setError("");
@@ -146,12 +160,22 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Save Path</label>
-              <Input value={savepath} onChange={(e) => setSavepath(e.target.value)} placeholder="Default" />
+              <label htmlFor="add-save-path" className="text-sm font-medium">Save Path</label>
+              <Input
+                id="add-save-path"
+                value={savepath}
+                onChange={(e) => setSavepath(e.target.value)}
+                placeholder={defaultSavePath || "Default"}
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Category</label>
-              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="None" />
+              <label htmlFor="add-category" className="text-sm font-medium">Category</label>
+              <Input
+                id="add-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="None"
+              />
             </div>
           </div>
 
