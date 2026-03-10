@@ -49,7 +49,7 @@ export function TorrentTable({
   return (
     <ScrollArea className="flex-1">
       <table className="w-full text-sm border-collapse">
-        <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+        <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm select-none">
           <tr className="text-muted-foreground text-xs uppercase tracking-wide">
             <th className="px-3 py-2 w-8">
               <input
@@ -109,7 +109,7 @@ export function TorrentTable({
                   />
                 </td>
                 <td className="px-2 py-2 truncate max-w-0">
-                  <span className="truncate block" title={t.name ?? ""}>
+                  <span className="truncate block select-text" title={t.name ?? ""}>
                     {t.name ?? "—"}
                   </span>
                 </td>

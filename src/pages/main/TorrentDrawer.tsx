@@ -253,7 +253,7 @@ function ContentPanel({ contents }: { contents: TorrentContent[] }) {
                 {isOpen ? <ChevronDownIcon className="size-3" /> : <ChevronRightIcon className="size-3" />}
               </button>
             )}
-            <span className={cn("truncate min-w-0", isFile ? "text-foreground" : "font-medium")}>
+            <span className={cn("truncate min-w-0 select-text", isFile ? "text-foreground" : "font-medium")}>
               {child.name}
             </span>
             {isFile && (
@@ -398,7 +398,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2 px-4 py-3 border-b shrink-0">
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm leading-snug truncate" title={torrent.name ?? ""}>{torrent.name ?? "—"}</h2>
+          <h2 className="font-semibold text-sm leading-snug truncate select-text" title={torrent.name ?? ""}>{torrent.name ?? "—"}</h2>
           <p className="text-xs text-muted-foreground font-mono mt-0.5 truncate">{torrent.hash}</p>
         </div>
         <button onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors mt-0.5">
