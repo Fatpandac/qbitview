@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   CirclePauseIcon,
   CirclePlayIcon,
+  DownloadIcon,
   Trash2Icon,
   RefreshCwIcon,
   RadioIcon,
@@ -136,6 +137,27 @@ export function TorrentContextMenu({
     );
     onAction();
   }
+  async function handleDownloadTorrent() {
+    if (!hash) return;
+    try {
+      const bytes = await invoke<number[]>("export_torrent", { hash });
+      const base = (torrent.name ?? hash).trim() || hash || "torrent";
+      const safe = base.replace(/[\\/:*?"<>|]/g, "_");
+      const filename = safe.endsWith(".torrent") ? safe : `${safe}.torrent`;
+      const blob = new Blob([new Uint8Array(bytes)], { type: "application/x-bittorrent" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Downloading torrent file");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to download torrent file");
+    }
+  }
   async function applySpeedLimit(type: SpeedType, bytes: number) {
     const cmd =
       type === "download"
@@ -225,6 +247,10 @@ export function TorrentContextMenu({
           <ContextMenuItem onClick={handleReannounce}>
             <RadioIcon className="size-4" />
             Force Reannounce
+          </ContextMenuItem>
+          <ContextMenuItem onClick={handleDownloadTorrent}>
+            <DownloadIcon className="size-4" />
+            Download .torrent
           </ContextMenuItem>
 
           <ContextMenuSeparator />

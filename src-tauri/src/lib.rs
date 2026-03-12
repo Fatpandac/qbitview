@@ -498,6 +498,17 @@ async fn set_preferences(preferences: Preferences) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn export_torrent(hash: String) -> Result<Vec<u8>, String> {
+    let client = CLIENT.lock().await;
+    if let Some(ref c) = *client {
+        let bytes = c.api.export_torrent(&hash).await.map_err(|e| e.to_string())?;
+        Ok(bytes.to_vec())
+    } else {
+        Err("Client not initialized. Please login first.".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -519,6 +530,7 @@ pub fn run() {
             get_torrent_peers,
             get_torrent_web_seeds,
             get_torrent_contents,
+            export_torrent,
             set_torrent_download_limit,
             set_torrent_upload_limit,
             recheck_torrents,
