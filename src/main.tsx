@@ -9,6 +9,10 @@ scan({
   enabled: true,
 });
 
+if (import.meta.env.DEV) {
+  import("react-grab");
+}
+
 window.addEventListener("keydown", (event) => {
   if (event.metaKey && (event.key === "," || event.code === "Comma")) {
     event.preventDefault();
