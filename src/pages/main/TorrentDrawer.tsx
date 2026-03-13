@@ -35,6 +35,87 @@ function formatDate(u?: number | null) {
   if (!u || u <= 0) return "—";
   return new Date(u * 1000).toLocaleString();
 }
+export function truncateMiddleByWidth(
+  value: string,
+  maxWidth: number,
+  measure: (text: string) => number,
+) {
+  if (maxWidth <= 0) return value;
+  if (measure(value) <= maxWidth) return value;
+  const ellipsis = "...";
+  if (measure(ellipsis) >= maxWidth) return ellipsis;
+
+  let low = 1;
+  let high = value.length - 1;
+  let best = ellipsis;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const head = Math.floor(mid / 2);
+    const tail = mid - head;
+    const candidate = `${value.slice(0, head)}${ellipsis}${value.slice(-tail)}`;
+    if (measure(candidate) <= maxWidth) {
+      best = candidate;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return best;
+}
+
+function MiddleEllipsisText({
+  text,
+  className,
+  title,
+}: {
+  text: string;
+  className?: string;
+  title?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [display, setDisplay] = useState(text);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let rafId: number | null = null;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const update = () => {
+      if (!ctx) {
+        setDisplay(text);
+        return;
+      }
+      const width = el.clientWidth;
+      if (width <= 0) {
+        setDisplay(text);
+        return;
+      }
+      const style = getComputedStyle(el);
+      ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} / ${style.lineHeight} ${style.fontFamily}`;
+      const next = truncateMiddleByWidth(text, width, (v) => ctx.measureText(v).width);
+      setDisplay(next);
+    };
+    const ro = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(update);
+    });
+    ro.observe(el);
+    update();
+    return () => {
+      ro.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [text]);
+
+  return (
+    <span ref={ref} className={className} title={title ?? text}>
+      {display}
+    </span>
+  );
+}
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -254,18 +335,21 @@ function ContentPanel({ contents }: { contents: TorrentContent[] }) {
                 {isOpen ? <ChevronDownIcon className="size-3" /> : <ChevronRightIcon className="size-3" />}
               </button>
             )}
-            <span className={cn("truncate min-w-0 select-text", isFile ? "text-foreground" : "font-medium")}>
-              {child.name}
-            </span>
-            {isFile && (
-              <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                {formatBytes(child.file!.size)}
-              </span>
-            )}
+            <div className={cn("grid items-center gap-2 min-w-0 w-full", isFile ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
+              <MiddleEllipsisText
+                text={child.name}
+                className={cn("truncate min-w-0 select-text block", isFile ? "text-foreground" : "font-medium")}
+              />
+              {isFile && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                  {formatBytes(child.file!.size)}
+                </span>
+              )}
+            </div>
           </div>
           {isFile ? (
-            <div className="flex items-center gap-2 min-w-0" style={{ paddingLeft: depth * 12 }}>
-              <div className="flex-1 bg-secondary rounded-full h-1 overflow-hidden min-w-0">
+            <div className="flex flex-col gap-1 min-w-0" style={{ paddingLeft: depth * 12 }}>
+              <div className="bg-secondary rounded-full h-1 overflow-hidden min-w-0">
                 <div
                   className="h-full bg-primary rounded-full"
                   style={{ width: `${(child.file!.progress * 100).toFixed(1)}%` }}
