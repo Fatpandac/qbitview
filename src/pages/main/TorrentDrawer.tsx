@@ -65,6 +65,11 @@ export function truncateMiddleByWidth(
   return best;
 }
 
+export function scrollContentViewportToTop(root?: HTMLElement | null) {
+  const viewport = root?.querySelector<HTMLElement>("[data-slot=\"scroll-area-viewport\"]");
+  viewport?.scrollTo({ top: 0, behavior: "auto" });
+}
+
 function MiddleEllipsisText({
   text,
   className,
@@ -391,6 +396,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(saved))) : DEFAULT_WIDTH;
   });
   const piecesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -418,6 +424,12 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
   };
+
+  useEffect(() => {
+    const root = contentScrollRef.current;
+    if (!root) return;
+    scrollContentViewportToTop(root);
+  }, [tab]);
 
   useEffect(() => {
     if (!torrent.hash) return;
@@ -533,7 +545,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       </ScrollArea>
 
       {/* Content */}
-      <ScrollArea className="flex-1 min-h-0">
+      <ScrollArea ref={contentScrollRef} className="flex-1 min-h-0">
         <div className="p-4">
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-10">Loading…</p>

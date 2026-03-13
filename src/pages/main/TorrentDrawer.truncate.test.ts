@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
-import { describe, expect, it } from "vitest";
-import { truncateMiddleByWidth } from "./TorrentDrawer";
+import { describe, expect, it, vi } from "vitest";
+import { scrollContentViewportToTop, truncateMiddleByWidth } from "./TorrentDrawer";
 
 describe("truncateMiddleByWidth", () => {
   const measure = (text: string) => text.length * 10;
@@ -19,5 +19,19 @@ describe("truncateMiddleByWidth", () => {
 
   it("returns ellipsis when space is extremely tight", () => {
     expect(truncateMiddleByWidth("abcdef", 10, measure)).toBe("...");
+  });
+});
+
+describe("scrollContentViewportToTop", () => {
+  it("scrolls the scroll-area viewport to the top", () => {
+    const root = document.createElement("div");
+    const viewport = document.createElement("div");
+    viewport.setAttribute("data-slot", "scroll-area-viewport");
+    root.appendChild(viewport);
+    const scrollSpy = vi.fn();
+    viewport.scrollTo = scrollSpy;
+
+    scrollContentViewportToTop(root);
+    expect(scrollSpy).toHaveBeenCalledWith({ top: 0, behavior: "auto" });
   });
 });
