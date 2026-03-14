@@ -4,6 +4,7 @@ import { ArrowLeftIcon, SaveIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { isMacOS } from "@/lib/platform";
 import router from "@/router";
 import { cn } from "@/lib/utils";
 
@@ -174,6 +175,7 @@ function buildPreferencesPayload(form: SettingsForm): PreferencesPayload {
 }
 
 function Settings() {
+  const headerLeftPadding = isMacOS() ? "76px" : "16px";
   const [form, setForm] = useState<SettingsForm>(emptyForm);
   const [initial, setInitial] = useState<SettingsForm>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ function Settings() {
           style={{
             height: "calc(52px + env(safe-area-inset-top))",
             paddingTop: "env(safe-area-inset-top)",
-            paddingLeft: "76px",
+            paddingLeft: headerLeftPadding,
           }}
         >
           <Button size="sm" variant="ghost" onClick={() => router.navigate("/main")}>

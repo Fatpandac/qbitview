@@ -1,6 +1,7 @@
 import { ArrowDownIcon, ArrowUpIcon, NetworkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { isMacOS } from "@/lib/platform";
 import { FilterKey, TransferInfo } from "./types";
 import { FILTERS, formatSpeed } from "./utils";
 
@@ -13,6 +14,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ version, filter, counts, onFilterChange, transferInfo }: SidebarProps) {
+  const titleLeftPadding = isMacOS() ? "76px" : "12px";
+
   return (
     <aside className="w-44 shrink-0 flex flex-col border-r bg-muted/30">
       {/* Draggable title bar zone */}
@@ -24,7 +27,7 @@ export function Sidebar({ version, filter, counts, onFilterChange, transferInfo 
         <div
           data-tauri-drag-region
           className="flex flex-col justify-end h-full pb-2"
-          style={{ paddingLeft: "76px" }}
+          style={{ paddingLeft: titleLeftPadding }}
         >
           <h1 data-tauri-drag-region className="font-bold text-sm tracking-tight leading-none pointer-events-none">qBitView</h1>
           {version && (
