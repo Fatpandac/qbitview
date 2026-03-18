@@ -1,6 +1,10 @@
 /// <reference types="vitest" />
 import { describe, expect, it, vi } from "vitest";
-import { scrollContentViewportToTop, truncateMiddleByWidth } from "./TorrentDrawer";
+import {
+  handleDrawerEscapeKey,
+  scrollContentViewportToTop,
+  truncateMiddleByWidth,
+} from "./TorrentDrawer";
 
 describe("truncateMiddleByWidth", () => {
   const measure = (text: string) => text.length * 10;
@@ -33,5 +37,29 @@ describe("scrollContentViewportToTop", () => {
 
     scrollContentViewportToTop(root);
     expect(scrollSpy).toHaveBeenCalledWith({ top: 0, behavior: "auto" });
+  });
+});
+
+describe("handleDrawerEscapeKey", () => {
+  it("closes the drawer on Escape", () => {
+    const closeSpy = vi.fn();
+    const event = new KeyboardEvent("keydown", { key: "Escape" });
+    const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+    handleDrawerEscapeKey(event, closeSpy);
+
+    expect(preventDefaultSpy).toHaveBeenCalledOnce();
+    expect(closeSpy).toHaveBeenCalledOnce();
+  });
+
+  it("ignores non-Escape keys", () => {
+    const closeSpy = vi.fn();
+    const event = new KeyboardEvent("keydown", { key: "Enter" });
+    const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+
+    handleDrawerEscapeKey(event, closeSpy);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
+    expect(closeSpy).not.toHaveBeenCalled();
   });
 });

@@ -70,6 +70,12 @@ export function scrollContentViewportToTop(root?: HTMLElement | null) {
   viewport?.scrollTo({ top: 0, behavior: "auto" });
 }
 
+export function handleDrawerEscapeKey(event: KeyboardEvent, onClose: () => void) {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  onClose();
+}
+
 function MiddleEllipsisText({
   text,
   className,
@@ -430,6 +436,17 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     if (!root) return;
     scrollContentViewportToTop(root);
   }, [tab]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      handleDrawerEscapeKey(event, onClose);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     if (!torrent.hash) return;
