@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeftIcon, SaveIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { isMacOS } from "@/lib/platform";
 import router from "@/router";
 import { cn } from "@/lib/utils";
+import { useLocation, useNavigate } from "react-router";
+import { CommandPalette } from "@/components/CommandPalette";
+import { parseSettingsTargetFromSearch } from "@/components/command-palette.utils";
 
 interface PreferencesPayload {
   save_path?: string;
@@ -176,11 +179,21 @@ function buildPreferencesPayload(form: SettingsForm): PreferencesPayload {
 
 function Settings() {
   const headerLeftPadding = isMacOS() ? "76px" : "16px";
+  const location = useLocation();
+  const navigate = useNavigate();
   const [form, setForm] = useState<SettingsForm>(emptyForm);
   const [initial, setInitial] = useState<SettingsForm>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const returnTo =
+    typeof location.state === "object" &&
+    location.state !== null &&
+    "paletteFrom" in location.state &&
+    typeof location.state.paletteFrom === "string"
+      ? location.state.paletteFrom
+      : "/main";
 
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
 
@@ -211,17 +224,31 @@ function Settings() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      const active = document.activeElement;
-      if (!active || active === document.body) {
-        event.preventDefault();
-        router.navigate("/main");
-      }
+      event.preventDefault();
+      navigate(returnTo);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, []);
+  }, [navigate, returnTo]);
+
+  useEffect(() => {
+    const targetId = parseSettingsTargetFromSearch(location.search);
+    if (!targetId) return;
+    const timer = window.setTimeout(() => {
+      const root = scrollAreaRef.current;
+      const viewport = root?.querySelector<HTMLElement>("[data-slot=\"scroll-area-viewport\"]");
+      const element = document.getElementById(targetId);
+      if (!viewport || !element) return;
+      const viewportRect = viewport.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      const nextTop = viewport.scrollTop + elementRect.top - viewportRect.top - 24;
+      viewport.scrollTo({ top: Math.max(0, nextTop), behavior: "smooth" });
+      element.focus?.();
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [location.search, loading]);
 
   function update<K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -249,6 +276,7 @@ function Settings() {
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground">
+      <CommandPalette />
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <header
           data-tauri-drag-region
@@ -259,7 +287,7 @@ function Settings() {
             paddingLeft: headerLeftPadding,
           }}
         >
-          <Button size="sm" variant="ghost" onClick={() => router.navigate("/main")}>
+          <Button size="sm" variant="ghost" onClick={() => navigate(returnTo)}>
             <ArrowLeftIcon className="size-4" />
             Back
           </Button>
@@ -276,7 +304,7 @@ function Settings() {
           </div>
         </header>
 
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
           <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
             {message && (
               <div className={cn(

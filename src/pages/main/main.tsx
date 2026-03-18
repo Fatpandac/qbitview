@@ -3,6 +3,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
 import { Toaster } from "sonner";
+import { useLocation, useNavigate } from "react-router";
 import { FilterKey, Torrent, TransferInfo } from "./types";
 import { Sidebar } from "./Sidebar";
 import { Toolbar } from "./Toolbar";
@@ -13,8 +14,13 @@ import { DeleteModal } from "./DeleteModal";
 import { TorrentDrawer } from "./TorrentDrawer";
 import { countByFilter, filterTorrents } from "./utils";
 import useMainStore from "@/sotres/main";
+import { CommandPalette } from "@/components/CommandPalette";
+import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
+import router from "@/router";
 
 function Main() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { torrents, transferInfo, version, setTorrents, setTransferInfo, setVersion } = useMainStore();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -104,6 +110,22 @@ function Main() {
     };
   }, []);
 
+  useEffect(() => {
+    const nextFilter = parseFilterFromSearch(location.search);
+    if (nextFilter) {
+      setFilter(nextFilter);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const targetHash = parseTorrentFromSearch(location.search);
+    if (!targetHash) return;
+    const target = torrents.find((torrent) => torrent.hash === targetHash);
+    if (target) {
+      setActiveTorrent(target);
+    }
+  }, [location.search, torrents]);
+
   const counts = useMemo(() => countByFilter(torrents), [torrents]);
   const filteredTorrents = useMemo(() => filterTorrents(torrents, filter), [torrents, filter]);
 
@@ -148,6 +170,7 @@ function Main() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground relative">
+      <CommandPalette />
       {isDragging && (
         <div className="absolute inset-0 z-50 bg-primary/10 border-4 border-dashed border-primary rounded-lg m-2 pointer-events-none flex flex-col items-center justify-center gap-3">
           <UploadIcon className="size-14 text-primary" />
@@ -171,6 +194,7 @@ function Main() {
           onPause={handleStop}
           onResume={handleStart}
           onDelete={() => setShowDeleteModal(true)}
+          onOpenSettings={() => navigate("/setting")}
         />
         <TorrentTable
           torrents={filteredTorrents}
@@ -196,7 +220,11 @@ function Main() {
       {activeTorrent && (
         <TorrentDrawer
           torrent={activeTorrent}
-          onClose={() => setActiveTorrent(null)}
+          onClose={() => {
+            setActiveTorrent(null);
+            const activeFilter = parseFilterFromSearch(location.search) ?? filter;
+            router.navigate(`/main?filter=${encodeURIComponent(activeFilter)}`);
+          }}
         />
       )}
 

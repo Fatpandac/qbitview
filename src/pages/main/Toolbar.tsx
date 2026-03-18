@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Settings2Icon, Trash2Icon } from "lucide-react";
-import router from "@/router";
 
 interface ToolbarProps {
   totalCount: number;
@@ -9,6 +8,7 @@ interface ToolbarProps {
   onPause: () => void;
   onResume: () => void;
   onDelete: () => void;
+  onOpenSettings: () => void;
 }
 
 export function Toolbar({
@@ -18,6 +18,7 @@ export function Toolbar({
   onPause,
   onResume,
   onDelete,
+  onOpenSettings,
 }: ToolbarProps) {
   const hasSelection = selectedCount > 0;
 
@@ -48,7 +49,7 @@ export function Toolbar({
       </Button>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button size="sm" variant="ghost" onClick={() => router.navigate("/setting")}>
+        <Button size="sm" variant="ghost" onClick={onOpenSettings}>
           <Settings2Icon className="size-4" />
           Settings
         </Button>
