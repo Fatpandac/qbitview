@@ -70,6 +70,39 @@ export function scrollContentViewportToTop(root?: HTMLElement | null) {
   viewport?.scrollTo({ top: 0, behavior: "auto" });
 }
 
+function createDrawerAbortError() {
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
+}
+
+export function raceDrawerRequestWithAbort<T>(promise: Promise<T>, signal: AbortSignal) {
+  if (signal.aborted) return Promise.reject(createDrawerAbortError());
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener("abort", onAbort);
+      reject(createDrawerAbortError());
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      },
+    );
+  });
+}
+
+export function isDrawerRequestAborted(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 export function handleDrawerEscapeKey(event: KeyboardEvent, onClose: () => void) {
   if (event.key !== "Escape") return;
   event.preventDefault();
@@ -451,6 +484,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
   useEffect(() => {
     if (!torrent.hash) return;
     let cancelled = false;
+    const controller = new AbortController();
 
     setLoading(true);
     setProperty(null);
@@ -462,12 +496,30 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
     setTab("info");
 
     Promise.all([
-      invoke<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }).catch(() => null),
-      invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash }).catch(() => []),
-      invoke<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }).catch(() => []),
-      invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }).catch(() => []),
-      invoke<string[]>("get_torrent_web_seeds", { hash: torrent.hash }).catch(() => []),
-      invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }).catch(() => []),
+      raceDrawerRequestWithAbort(
+        invoke<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }).catch(() => null),
+        controller.signal,
+      ),
+      raceDrawerRequestWithAbort(
+        invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash }).catch(() => []),
+        controller.signal,
+      ),
+      raceDrawerRequestWithAbort(
+        invoke<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }).catch(() => []),
+        controller.signal,
+      ),
+      raceDrawerRequestWithAbort(
+        invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }).catch(() => []),
+        controller.signal,
+      ),
+      raceDrawerRequestWithAbort(
+        invoke<string[]>("get_torrent_web_seeds", { hash: torrent.hash }).catch(() => []),
+        controller.signal,
+      ),
+      raceDrawerRequestWithAbort(
+        invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }).catch(() => []),
+        controller.signal,
+      ),
     ])
       .then(([props, pcs, trk, prs, ws, cnt]) => {
         if (cancelled) return;
@@ -478,23 +530,39 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
         setWebseeds(ws as string[]);
         setContents(cnt as TorrentContent[]);
       })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .catch((error) => {
+        if (isDrawerRequestAborted(error)) return;
+      })
+      .finally(() => {
+        if (!cancelled && !controller.signal.aborted) setLoading(false);
+      });
 
     piecesIntervalRef.current = setInterval(async () => {
-      if (cancelled) return;
+      if (cancelled || controller.signal.aborted) return;
       try {
         const [pcs, prs] = await Promise.all([
-          invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! }).catch(() => null),
-          invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! }).catch(() => null),
+          raceDrawerRequestWithAbort(
+            invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! }).catch(() => null),
+            controller.signal,
+          ),
+          raceDrawerRequestWithAbort(
+            invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! }).catch(() => null),
+            controller.signal,
+          ),
         ]);
         if (cancelled) return;
         if (pcs) setPieces(pcs);
         if (prs) setPeers(prs);
-      } catch {}
+      } catch (error) {
+        if (!isDrawerRequestAborted(error)) {
+          return;
+        }
+      }
     }, 3000);
 
     return () => {
       cancelled = true;
+      controller.abort();
       if (piecesIntervalRef.current) clearInterval(piecesIntervalRef.current);
     };
   }, [torrent.hash]);

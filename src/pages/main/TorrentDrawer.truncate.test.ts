@@ -2,6 +2,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   handleDrawerEscapeKey,
+  isDrawerRequestAborted,
+  raceDrawerRequestWithAbort,
   scrollContentViewportToTop,
   truncateMiddleByWidth,
 } from "./TorrentDrawer";
@@ -61,5 +63,39 @@ describe("handleDrawerEscapeKey", () => {
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();
     expect(closeSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("raceDrawerRequestWithAbort", () => {
+  it("rejects with an abort-shaped error after the signal aborts", async () => {
+    const controller = new AbortController();
+    const pending = new Promise<string>((resolve) => {
+      setTimeout(() => resolve("done"), 20);
+    });
+
+    const request = raceDrawerRequestWithAbort(pending, controller.signal);
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("resolves when the signal stays active", async () => {
+    const controller = new AbortController();
+    await expect(
+      raceDrawerRequestWithAbort(Promise.resolve("done"), controller.signal),
+    ).resolves.toBe("done");
+  });
+});
+
+describe("isDrawerRequestAborted", () => {
+  it("recognizes abort errors", () => {
+    const error = new Error("The operation was aborted");
+    error.name = "AbortError";
+
+    expect(isDrawerRequestAborted(error)).toBe(true);
+  });
+
+  it("ignores non-abort errors", () => {
+    expect(isDrawerRequestAborted(new Error("boom"))).toBe(false);
   });
 });

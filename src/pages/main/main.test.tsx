@@ -1,7 +1,8 @@
 /// <reference types="vitest" />
 import { render, screen, waitFor } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
-import Main from "./main";
+import { MemoryRouter } from "react-router";
+import Main, { getRestorableTorrentFromSearch } from "./main";
 import useMainStore from "@/sotres/main";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -89,7 +90,11 @@ describe("Main page data persistence", () => {
       return Promise.resolve();
     });
 
-    render(<Main />);
+    render(
+      <MemoryRouter initialEntries={["/main"]}>
+        <Main />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByTestId("torrent-table")).toHaveTextContent("Old");
 
@@ -98,5 +103,42 @@ describe("Main page data persistence", () => {
     await waitFor(() => {
       expect(screen.getByTestId("torrent-table")).toHaveTextContent("New");
     });
+  });
+});
+
+describe("getRestorableTorrentFromSearch", () => {
+  const torrents = [
+    { hash: "a", name: "First" },
+    { hash: "b", name: "Second" },
+  ];
+
+  it("returns the matching torrent when it is not dismissed", () => {
+    expect(
+      getRestorableTorrentFromSearch({
+        targetHash: "a",
+        torrents,
+        dismissedHash: null,
+      }),
+    ).toEqual(torrents[0]);
+  });
+
+  it("does not restore the drawer for a dismissed torrent hash", () => {
+    expect(
+      getRestorableTorrentFromSearch({
+        targetHash: "a",
+        torrents,
+        dismissedHash: "a",
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when the target hash is missing", () => {
+    expect(
+      getRestorableTorrentFromSearch({
+        targetHash: null,
+        torrents,
+        dismissedHash: null,
+      }),
+    ).toBeNull();
   });
 });

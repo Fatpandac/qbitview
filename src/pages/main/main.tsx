@@ -18,6 +18,19 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
 import router from "@/router";
 
+export function getRestorableTorrentFromSearch({
+  targetHash,
+  torrents,
+  dismissedHash,
+}: {
+  targetHash: string | null;
+  torrents: Torrent[];
+  dismissedHash: string | null;
+}) {
+  if (!targetHash || targetHash === dismissedHash) return null;
+  return torrents.find((torrent) => torrent.hash === targetHash) ?? null;
+}
+
 function Main() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,6 +44,7 @@ function Main() {
   const [isDragging, setIsDragging] = useState(false);
   const [globalDlLimit, setGlobalDlLimit] = useState(0);
   const [globalUpLimit, setGlobalUpLimit] = useState(0);
+  const [dismissedTorrentHash, setDismissedTorrentHash] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeTorrentRef = useRef<Torrent | null>(null);
   activeTorrentRef.current = activeTorrent;
@@ -119,12 +133,18 @@ function Main() {
 
   useEffect(() => {
     const targetHash = parseTorrentFromSearch(location.search);
-    if (!targetHash) return;
-    const target = torrents.find((torrent) => torrent.hash === targetHash);
+    if (targetHash !== dismissedTorrentHash) {
+      setDismissedTorrentHash(null);
+    }
+    const target = getRestorableTorrentFromSearch({
+      targetHash,
+      torrents,
+      dismissedHash: dismissedTorrentHash,
+    });
     if (target) {
       setActiveTorrent(target);
     }
-  }, [location.search, torrents]);
+  }, [location.search, torrents, dismissedTorrentHash]);
 
   const counts = useMemo(() => countByFilter(torrents), [torrents]);
   const filteredTorrents = useMemo(() => filterTorrents(torrents, filter), [torrents, filter]);
@@ -202,9 +222,10 @@ function Main() {
           activeTorrentHash={activeTorrent?.hash}
           onToggleSelect={(hash) => toggleSelect(hash)}
           onSelectAll={selectAll}
-          onRowClick={(t) =>
-            setActiveTorrent((prev) => (prev?.hash === t.hash ? null : t))
-          }
+          onRowClick={(t) => {
+            setDismissedTorrentHash(null);
+            setActiveTorrent((prev) => (prev?.hash === t.hash ? null : t));
+          }}
           onAction={fetchData}
           onDelete={(t) => {
             setSelected(new Set([t.hash ?? ""]));
@@ -221,6 +242,7 @@ function Main() {
         <TorrentDrawer
           torrent={activeTorrent}
           onClose={() => {
+            setDismissedTorrentHash(activeTorrent.hash ?? null);
             setActiveTorrent(null);
             const activeFilter = parseFilterFromSearch(location.search) ?? filter;
             router.navigate(`/main?filter=${encodeURIComponent(activeFilter)}`);
