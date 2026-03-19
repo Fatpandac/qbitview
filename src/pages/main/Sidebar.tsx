@@ -1,4 +1,4 @@
-import { PanelLeftCloseIcon, PanelLeftOpenIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PanelLeftOpenIcon, Settings2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,9 +13,10 @@ interface SidebarProps {
   filter: FilterKey;
   counts: Record<FilterKey, number>;
   onFilterChange: (key: FilterKey) => void;
+  onOpenSettings: () => void;
 }
 
-export function Sidebar({ version, filter, counts, onFilterChange }: SidebarProps) {
+export function Sidebar({ version, filter, counts, onFilterChange, onOpenSettings }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true");
   const titleLeftPadding = isMacOS() ? "76px" : "12px";
   const widthClassName = collapsed ? "w-16" : "w-44";
@@ -79,19 +80,41 @@ export function Sidebar({ version, filter, counts, onFilterChange }: SidebarProp
         </nav>
       </ScrollArea>
 
-      <div className="p-2">
+      <div className={cn("p-2", collapsed ? "flex flex-col items-center gap-2" : "flex items-center gap-1")}>
         <button
           type="button"
           className={cn(
-            "rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
-            collapsed ? "ml-auto flex" : "ml-auto flex",
+            "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+            collapsed ? "flex p-1.5" : "flex items-center gap-2 px-2.5 py-1.5 flex-1",
           )}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((prev) => !prev)}
+          aria-label="Open settings"
+          title="Open settings"
+          onClick={onOpenSettings}
         >
-          {collapsed ? <PanelLeftOpenIcon className="size-4" /> : <PanelLeftCloseIcon className="size-4" />}
+          <Settings2Icon className="size-4 shrink-0" />
+          {!collapsed && <span className="text-sm">Settings</span>}
         </button>
+        {collapsed ? (
+          <button
+            type="button"
+            className="flex rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+            onClick={() => setCollapsed(false)}
+          >
+            <PanelLeftOpenIcon className="size-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="ml-auto flex rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
+            onClick={() => setCollapsed(true)}
+          >
+            <PanelLeftCloseIcon className="size-4" />
+          </button>
+        )}
       </div>
     </aside>
   );

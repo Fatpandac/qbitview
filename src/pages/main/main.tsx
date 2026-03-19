@@ -207,6 +207,7 @@ function Main() {
         filter={filter}
         counts={counts}
         onFilterChange={setFilter}
+        onOpenSettings={() => navigate("/setting")}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -217,7 +218,6 @@ function Main() {
           onPause={handleStop}
           onResume={handleStart}
           onDelete={() => setShowDeleteModal(true)}
-          onOpenSettings={() => navigate("/setting")}
         />
         <TorrentTable
           torrents={filteredTorrents}

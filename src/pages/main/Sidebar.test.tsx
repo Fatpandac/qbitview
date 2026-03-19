@@ -62,4 +62,32 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Downloading")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
   });
+
+  it("renders a settings action in the sidebar", async () => {
+    const user = userEvent.setup();
+    const openSettings = vi.fn();
+
+    render(
+      <Sidebar
+        version="v1"
+        filter="all"
+        counts={{
+          all: 0,
+          downloading: 0,
+          completed: 0,
+          paused: 0,
+          active: 0,
+          inactive: 0,
+          stalled: 0,
+          errored: 0,
+        }}
+        onFilterChange={() => {}}
+        onOpenSettings={openSettings}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open settings" }));
+
+    expect(openSettings).toHaveBeenCalledOnce();
+  });
 });
