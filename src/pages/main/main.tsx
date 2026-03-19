@@ -207,7 +207,6 @@ function Main() {
         filter={filter}
         counts={counts}
         onFilterChange={setFilter}
-        transferInfo={transferInfo}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

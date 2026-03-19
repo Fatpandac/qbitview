@@ -1,19 +1,17 @@
-import { ArrowDownIcon, ArrowUpIcon, NetworkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { isMacOS } from "@/lib/platform";
-import { FilterKey, TransferInfo } from "./types";
-import { FILTERS, formatSpeed } from "./utils";
+import { FilterKey } from "./types";
+import { FILTERS } from "./utils";
 
 interface SidebarProps {
   version: string;
   filter: FilterKey;
   counts: Record<FilterKey, number>;
   onFilterChange: (key: FilterKey) => void;
-  transferInfo: TransferInfo | null;
 }
 
-export function Sidebar({ version, filter, counts, onFilterChange, transferInfo }: SidebarProps) {
+export function Sidebar({ version, filter, counts, onFilterChange }: SidebarProps) {
   const titleLeftPadding = isMacOS() ? "76px" : "12px";
 
   return (
@@ -63,23 +61,6 @@ export function Sidebar({ version, filter, counts, onFilterChange, transferInfo 
           ))}
         </nav>
       </ScrollArea>
-
-      {transferInfo && (
-        <div className="p-3 border-t text-xs text-muted-foreground space-y-1">
-          <div className="flex items-center gap-1.5">
-            <ArrowDownIcon className="size-3 text-blue-500" />
-            <span>{formatSpeed(transferInfo.dl_info_speed)}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <ArrowUpIcon className="size-3 text-green-500" />
-            <span>{formatSpeed(transferInfo.up_info_speed)}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <NetworkIcon className="size-3" />
-            <span>{transferInfo.dht_nodes} nodes</span>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }
