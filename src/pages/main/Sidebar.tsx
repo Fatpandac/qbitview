@@ -17,9 +17,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ version, filter, counts, onFilterChange, onOpenSettings }: SidebarProps) {
+  const isMac = isMacOS();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true");
-  const titleLeftPadding = isMacOS() ? "76px" : "12px";
-  const widthClassName = collapsed ? "w-16" : "w-44";
+  const titleLeftPadding = isMac ? "92px" : "12px";
+  const widthClassName = collapsed ? (isMac ? "w-20" : "w-16") : "w-44";
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(collapsed));
