@@ -57,10 +57,18 @@ function App() {
   }
 
   return (
-    <main className="w-screen h-screen flex flex-col justify-center items-center gap-4">
-      <h1>qBitView</h1>
+    <main className="relative w-screen h-screen flex flex-col justify-center items-center gap-4 overflow-hidden">
+      <div
+        data-testid="login-drag-region"
+        data-tauri-drag-region
+        className="absolute inset-x-0 top-0 h-12"
+      />
 
-      <p>A qbittorrent client via Tauri</p>
+      <h1 data-tauri-drag-region className="pointer-events-none select-none">qBitView</h1>
+
+      <p data-tauri-drag-region className="pointer-events-none select-none">
+        A qbittorrent client via Tauri
+      </p>
 
       <form
         className="flex flex-row gap-2 w-sm"
