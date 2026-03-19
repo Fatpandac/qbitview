@@ -4,7 +4,14 @@ use qbit_rs::Qbit;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::Serialize;
 use tauri::async_runtime::Mutex;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Manager, Runtime};
 use std::sync::Arc;
+
+const TRAY_ID: &str = "transfer-monitor";
+const TRAY_SHOW_ID: &str = "tray-show";
+const TRAY_QUIT_ID: &str = "tray-quit";
 
 struct AppClient {
     api: Qbit,
@@ -22,6 +29,83 @@ struct TransferInfoResponse {
     dl_info_data: u64,
     up_info_data: u64,
     dht_nodes: u64,
+}
+
+fn format_rate(bytes_per_second: u64) -> String {
+    const UNITS: [&str; 5] = ["B/s", "KB/s", "MB/s", "GB/s", "TB/s"];
+    if bytes_per_second == 0 {
+        return "0 B/s".to_string();
+    }
+
+    let mut value = bytes_per_second as f64;
+    let mut unit_index = 0;
+
+    while value >= 1024.0 && unit_index < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit_index += 1;
+    }
+
+    format!("{value:.1} {}", UNITS[unit_index])
+}
+
+fn build_transfer_status_title(download_speed: Option<u64>, upload_speed: Option<u64>) -> String {
+    let download = download_speed.map(format_rate).unwrap_or_else(|| "—".to_string());
+    let upload = upload_speed.map(format_rate).unwrap_or_else(|| "—".to_string());
+    format!("↓ {download} ↑ {upload}")
+}
+
+#[cfg(target_os = "macos")]
+fn update_macos_tray_title<R: Runtime>(app: &AppHandle<R>, title: &str) {
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_title(Some(title));
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn update_macos_tray_title<R: Runtime>(_app: &AppHandle<R>, _title: &str) {}
+
+fn show_main_window<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+fn setup_tray<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<()> {
+    let app_handle = app.app_handle();
+    let show_item = MenuItem::with_id(app, TRAY_SHOW_ID, "Show qbitview", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, TRAY_QUIT_ID, "Quit", true, Some("CmdOrCtrl+Q"))?;
+    let separator = PredefinedMenuItem::separator(app)?;
+    let menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])?;
+    let mut tray_builder = TrayIconBuilder::with_id(TRAY_ID)
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .tooltip("qbitview");
+
+    if let Some(icon) = app_handle.default_window_icon().cloned() {
+        tray_builder = tray_builder.icon(icon);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        tray_builder = tray_builder
+            .title(build_transfer_status_title(None, None))
+            .icon_as_template(true);
+    }
+
+    let _ = tray_builder.build(app)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn update_transfer_monitor_title<R: Runtime>(
+    app: AppHandle<R>,
+    download_speed: Option<u64>,
+    upload_speed: Option<u64>,
+) {
+    let title = build_transfer_status_title(download_speed, upload_speed);
+    update_macos_tray_title(&app, &title);
 }
 
 #[tauri::command]
@@ -513,6 +597,27 @@ async fn export_torrent(hash: String) -> Result<Vec<u8>, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            setup_tray(app)?;
+            Ok(())
+        })
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            TRAY_SHOW_ID => show_main_window(app),
+            TRAY_QUIT_ID => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|app, event| {
+            if matches!(
+                event,
+                TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                }
+            ) {
+                show_main_window(app);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             login,
             get_version,
@@ -538,7 +643,38 @@ pub fn run() {
             get_global_speed_limits,
             get_preferences,
             set_preferences,
+            update_transfer_monitor_title,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_transfer_status_title, format_rate};
+
+    #[test]
+    fn formats_transfer_rates_for_small_values() {
+        assert_eq!(format_rate(0), "0 B/s");
+        assert_eq!(format_rate(512), "512.0 B/s");
+    }
+
+    #[test]
+    fn formats_transfer_rates_for_scaled_values() {
+        assert_eq!(format_rate(1536), "1.5 KB/s");
+        assert_eq!(format_rate(2 * 1024 * 1024), "2.0 MB/s");
+    }
+
+    #[test]
+    fn builds_transfer_status_title_with_known_speeds() {
+        assert_eq!(
+            build_transfer_status_title(Some(1536), Some(2 * 1024 * 1024)),
+            "↓ 1.5 KB/s ↑ 2.0 MB/s"
+        );
+    }
+
+    #[test]
+    fn builds_transfer_status_title_with_missing_speeds() {
+        assert_eq!(build_transfer_status_title(None, None), "↓ — ↑ —");
+    }
 }

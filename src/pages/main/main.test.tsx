@@ -104,6 +104,39 @@ describe("Main page data persistence", () => {
       expect(screen.getByTestId("torrent-table")).toHaveTextContent("New");
     });
   });
+
+  it("syncs the tray transfer monitor with the same transfer info shown in the UI", async () => {
+    const transferInfo = {
+      dl_info_speed: 2048,
+      up_info_speed: 1024,
+      dl_info_data: 0,
+      up_info_data: 0,
+      dht_nodes: 0,
+    };
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_torrents") return Promise.resolve([]);
+      if (cmd === "get_transfer_info") return Promise.resolve(transferInfo);
+      if (cmd === "get_version") return Promise.resolve("v1");
+      if (cmd === "get_global_speed_limits") {
+        return Promise.resolve({ dl_limit: 0, up_limit: 0 });
+      }
+      return Promise.resolve();
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/main"]}>
+        <Main />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("update_transfer_monitor_title", {
+        downloadSpeed: transferInfo.dl_info_speed,
+        uploadSpeed: transferInfo.up_info_speed,
+      });
+    });
+  });
 });
 
 describe("getRestorableTorrentFromSearch", () => {

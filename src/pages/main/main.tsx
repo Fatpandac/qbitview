@@ -101,6 +101,10 @@ function Main() {
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
+      invoke("update_transfer_monitor_title", {
+        downloadSpeed: ti.dl_info_speed,
+        uploadSpeed: ti.up_info_speed,
+      }).catch(console.error);
       const active = activeTorrentRef.current;
       if (active) {
         const updated = ts.find((t) => t.hash === active.hash);
