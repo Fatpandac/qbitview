@@ -81,42 +81,50 @@ export function Sidebar({ version, filter, counts, onFilterChange, onOpenSetting
         </nav>
       </ScrollArea>
 
-      <div className={cn("p-2", collapsed ? "flex flex-col items-center gap-2" : "flex items-center gap-1")}>
-        <button
-          type="button"
-          className={cn(
-            "rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
-            collapsed ? "flex p-1.5" : "flex items-center gap-2 px-2.5 py-1.5 flex-1",
-          )}
-          aria-label="Open settings"
-          title="Open settings"
-          onClick={onOpenSettings}
-        >
-          <Settings2Icon className="size-4 shrink-0" />
-          {!collapsed && <span className="text-sm">Settings</span>}
-        </button>
-        {collapsed ? (
+      {collapsed ? (
+        <div className="p-2 flex flex-col items-center gap-2">
           <button
             type="button"
-            className="flex rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Open settings"
+            title="Open settings"
+            onClick={onOpenSettings}
+          >
+            <Settings2Icon className="size-4 shrink-0" />
+          </button>
+          <button
+            type="button"
+            className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Expand sidebar"
             title="Expand sidebar"
             onClick={() => setCollapsed(false)}
           >
             <PanelLeftOpenIcon className="size-4" />
           </button>
-        ) : (
+        </div>
+      ) : (
+        <div className="p-2 flex items-center justify-between gap-2">
           <button
             type="button"
-            className="ml-auto flex rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Collapse sidebar"
             title="Collapse sidebar"
             onClick={() => setCollapsed(true)}
           >
             <PanelLeftCloseIcon className="size-4" />
           </button>
-        )}
-      </div>
+          <button
+            type="button"
+            className="ml-auto flex items-center gap-2 rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Open settings"
+            title="Open settings"
+            onClick={onOpenSettings}
+          >
+            <Settings2Icon className="size-4 shrink-0" />
+            <span className="text-sm whitespace-nowrap">Settings</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 }
