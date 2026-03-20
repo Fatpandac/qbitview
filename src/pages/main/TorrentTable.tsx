@@ -109,9 +109,14 @@ export function TorrentTable({
                   />
                 </td>
                 <td className="px-2 py-2 truncate max-w-0">
-                  <span className="truncate block select-text" title={t.name ?? ""}>
-                    {t.name ?? "—"}
-                  </span>
+                  <div className="min-w-0">
+                    <span className="truncate block select-text" title={t.name ?? ""}>
+                      {t.name ?? "—"}
+                    </span>
+                    <span className="mt-0.5 truncate block text-xs text-muted-foreground" title={t.category || "未分类"}>
+                      {t.category || "未分类"}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
                   {formatBytes(t.size)}
