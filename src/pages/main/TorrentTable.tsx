@@ -1,3 +1,4 @@
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent } from "./types";
@@ -64,8 +65,18 @@ export function TorrentTable({
             <th className="text-right px-3 py-2 font-medium w-20">Size</th>
             <th className="text-left px-3 py-2 font-medium w-28">Progress</th>
             <th className="text-left px-3 py-2 font-medium w-28">Status</th>
-            <th className="text-right px-3 py-2 font-medium w-24">↓ Speed</th>
-            <th className="text-right px-3 py-2 font-medium w-24">↑ Speed</th>
+            <th className="text-right px-3 py-2 font-medium w-24">
+              <span className="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap">
+                <ArrowDownIcon className="size-3.5 shrink-0" />
+                <span>Speed</span>
+              </span>
+            </th>
+            <th className="text-right px-3 py-2 font-medium w-24">
+              <span className="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap">
+                <ArrowUpIcon className="size-3.5 shrink-0" />
+                <span>Speed</span>
+              </span>
+            </th>
             <th className="text-right px-3 py-2 font-medium w-16">Seeds</th>
             <th className="text-right px-3 py-2 font-medium w-16">Peers</th>
             <th className="text-right px-3 py-2 font-medium w-20">ETA</th>
