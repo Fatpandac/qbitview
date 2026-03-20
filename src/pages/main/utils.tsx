@@ -21,6 +21,16 @@ export const FILTERS: { key: FilterKey; label: string; icon: React.ReactNode }[]
   { key: "errored", label: "Errored", icon: <CircleXIcon className="size-4" /> },
 ];
 
+export interface CategoryCount {
+  label: string;
+  count: number;
+}
+
+export function normalizeCategoryLabel(category?: string | null) {
+  const normalized = category?.trim();
+  return normalized ? normalized : "未分类";
+}
+
 export function formatBytes(bytes?: number): string {
   if (bytes == null) return "—";
   if (bytes === 0) return "0 B";
@@ -65,6 +75,31 @@ export function filterTorrents(torrents: import("./types").Torrent[], key: impor
 export function countByFilter(torrents: import("./types").Torrent[]): Record<import("./types").FilterKey, number> {
   const keys: import("./types").FilterKey[] = ["all","downloading","completed","paused","active","inactive","stalled","errored"];
   return Object.fromEntries(keys.map((k) => [k, filterTorrents(torrents, k).length])) as Record<import("./types").FilterKey, number>;
+}
+
+export function countByCategory(torrents: import("./types").Torrent[]): CategoryCount[] {
+  const counts = new Map<string, number>();
+
+  torrents.forEach((torrent) => {
+    const label = normalizeCategoryLabel(torrent.category);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => {
+      if (a.label === "未分类") return 1;
+      if (b.label === "未分类") return -1;
+      return a.label.localeCompare(b.label);
+    });
+}
+
+export function filterTorrentsByCategory(
+  torrents: import("./types").Torrent[],
+  category: string | null,
+) {
+  if (!category) return torrents;
+  return torrents.filter((torrent) => normalizeCategoryLabel(torrent.category) === category);
 }
 
 export function getStateLabel(state?: string): { label: string; color: string } {

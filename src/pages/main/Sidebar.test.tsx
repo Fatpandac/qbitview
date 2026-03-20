@@ -25,7 +25,11 @@ describe("Sidebar", () => {
           stalled: 0,
           errored: 0,
         }}
+        categories={[]}
+        activeCategory={null}
         onFilterChange={() => {}}
+        onCategoryChange={() => {}}
+        onOpenSettings={() => {}}
       />,
     );
 
@@ -55,7 +59,11 @@ describe("Sidebar", () => {
           stalled: 0,
           errored: 0,
         }}
+        categories={[]}
+        activeCategory={null}
         onFilterChange={() => {}}
+        onCategoryChange={() => {}}
+        onOpenSettings={() => {}}
       />,
     );
 
@@ -81,7 +89,10 @@ describe("Sidebar", () => {
           stalled: 0,
           errored: 0,
         }}
+        categories={[]}
+        activeCategory={null}
         onFilterChange={() => {}}
+        onCategoryChange={() => {}}
         onOpenSettings={openSettings}
       />,
     );

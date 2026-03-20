@@ -1,5 +1,6 @@
 /// <reference types="vitest" />
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
 import { MemoryRouter } from "react-router";
 import Main, { getRestorableTorrentFromSearch } from "./main";
@@ -16,7 +17,16 @@ vi.mock("@tauri-apps/api/webview", () => ({
 }));
 
 vi.mock("./Sidebar", () => ({
-  Sidebar: () => <div data-testid="sidebar" />,
+  Sidebar: ({ onCategoryChange }: { onCategoryChange?: (value: string | null) => void }) => (
+    <div data-testid="sidebar">
+      <button type="button" onClick={() => onCategoryChange?.("Movies")}>
+        category-movies
+      </button>
+      <button type="button" onClick={() => onCategoryChange?.(null)}>
+        category-all
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./Toolbar", () => ({
@@ -136,6 +146,53 @@ describe("Main page data persistence", () => {
         uploadSpeed: transferInfo.up_info_speed,
       });
     });
+  });
+
+  it("filters the torrent list by the selected category", async () => {
+    const user = userEvent.setup();
+
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_torrents") {
+        return Promise.resolve([
+          { hash: "1", name: "Movie A", category: "Movies" },
+          { hash: "2", name: "TV A", category: "TV" },
+          { hash: "3", name: "No Category", category: "" },
+        ]);
+      }
+      if (cmd === "get_transfer_info") {
+        return Promise.resolve({
+          dl_info_speed: 0,
+          up_info_speed: 0,
+          dl_info_data: 0,
+          up_info_data: 0,
+          dht_nodes: 0,
+        });
+      }
+      if (cmd === "get_version") return Promise.resolve("v1");
+      if (cmd === "get_global_speed_limits") {
+        return Promise.resolve({ dl_limit: 0, up_limit: 0 });
+      }
+      return Promise.resolve();
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/main"]}>
+        <Main />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("torrent-table")).toHaveTextContent("Movie A,TV A,No Category");
+    });
+
+    await user.click(screen.getByRole("button", { name: "category-movies" }));
+
+    expect(screen.getByTestId("torrent-table")).toHaveTextContent("Movie A");
+    expect(screen.getByTestId("torrent-table")).not.toHaveTextContent("TV A");
+
+    await user.click(screen.getByRole("button", { name: "category-all" }));
+
+    expect(screen.getByTestId("torrent-table")).toHaveTextContent("Movie A,TV A,No Category");
   });
 });
 

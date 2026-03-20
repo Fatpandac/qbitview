@@ -12,7 +12,7 @@ import { StatusBar } from "./StatusBar";
 import { AddTorrentModal } from "./AddTorrentModal";
 import { DeleteModal } from "./DeleteModal";
 import { TorrentDrawer } from "./TorrentDrawer";
-import { countByFilter, filterTorrents } from "./utils";
+import { countByCategory, countByFilter, filterTorrents, filterTorrentsByCategory } from "./utils";
 import useMainStore from "@/sotres/main";
 import { CommandPalette } from "@/components/CommandPalette";
 import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
@@ -45,6 +45,7 @@ function Main() {
   const [globalDlLimit, setGlobalDlLimit] = useState(0);
   const [globalUpLimit, setGlobalUpLimit] = useState(0);
   const [dismissedTorrentHash, setDismissedTorrentHash] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeTorrentRef = useRef<Torrent | null>(null);
   activeTorrentRef.current = activeTorrent;
@@ -151,7 +152,19 @@ function Main() {
   }, [location.search, torrents, dismissedTorrentHash]);
 
   const counts = useMemo(() => countByFilter(torrents), [torrents]);
-  const filteredTorrents = useMemo(() => filterTorrents(torrents, filter), [torrents, filter]);
+  const categoryCounts = useMemo(() => countByCategory(torrents), [torrents]);
+  const filteredTorrents = useMemo(
+    () => filterTorrentsByCategory(filterTorrents(torrents, filter), activeCategory),
+    [torrents, filter, activeCategory],
+  );
+
+  useEffect(() => {
+    if (!activeCategory) return;
+    const hasCategory = categoryCounts.some((category) => category.label === activeCategory);
+    if (!hasCategory) {
+      setActiveCategory(null);
+    }
+  }, [activeCategory, categoryCounts]);
 
   function toggleSelect(hash: string) {
     setSelected((prev) => {
@@ -206,7 +219,10 @@ function Main() {
         version={version}
         filter={filter}
         counts={counts}
+        categories={categoryCounts}
+        activeCategory={activeCategory}
         onFilterChange={setFilter}
+        onCategoryChange={setActiveCategory}
         onOpenSettings={() => navigate("/setting")}
       />
 
