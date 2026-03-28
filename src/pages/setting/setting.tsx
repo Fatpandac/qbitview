@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { isMacOS } from "@/lib/platform";
-import router from "@/router";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router";
 import { CommandPalette } from "@/components/CommandPalette";

@@ -81,8 +81,8 @@ export function buildCommandPaletteItems(context: CommandPaletteContext, rawQuer
 
   if (!query) return items;
 
-  const fzf = new Fzf(items, {
-    selector: (item) => getSearchText(item),
+  const fzf = new Fzf<CommandPaletteItem[]>(items, {
+    selector: (item: CommandPaletteItem) => getSearchText(item),
     casing: "case-insensitive",
   });
 
