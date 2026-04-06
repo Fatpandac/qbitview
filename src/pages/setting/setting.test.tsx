@@ -2,6 +2,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
+import { createMemoryRouter, RouterProvider } from "react-router";
 import Settings from "./setting";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -10,9 +11,24 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 const mockInvoke = vi.mocked(invoke);
 
+function renderSettings() {
+  const router = createMemoryRouter(
+    [
+      { path: "/setting", element: <Settings /> },
+      { path: "/main", element: <div>Main</div> },
+    ],
+    { initialEntries: ["/setting"] },
+  );
+  return render(
+    <RouterProvider router={router} />,
+  );
+}
+
 describe("Settings page", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
+    localStorage.clear();
+    document.documentElement.classList.remove("dark");
   });
 
   it("loads preferences and renders form values", async () => {
@@ -50,7 +66,7 @@ describe("Settings page", () => {
       return Promise.resolve();
     });
 
-    render(<Settings />);
+    renderSettings();
 
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
 
@@ -68,6 +84,7 @@ describe("Settings page", () => {
     expect(screen.getByLabelText("Action on ratio hit")).toHaveValue("1");
     expect(screen.getByLabelText("Enable seeding time limit")).toBeChecked();
     expect(screen.getByLabelText("Seeding time (minutes)")).toHaveValue(60);
+    expect(screen.getByLabelText("Follow system")).toBeChecked();
   });
 
   it("saves updated preferences", async () => {
@@ -106,7 +123,7 @@ describe("Settings page", () => {
     });
 
     const user = userEvent.setup();
-    render(<Settings />);
+    renderSettings();
 
     await waitFor(() => {
       expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
@@ -122,6 +139,7 @@ describe("Settings page", () => {
     await user.click(screen.getByLabelText("Enable seeding time limit"));
     await user.clear(screen.getByLabelText("Seeding time (minutes)"));
     await user.type(screen.getByLabelText("Seeding time (minutes)"), "30");
+    await user.click(screen.getByLabelText("Dark"));
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
@@ -141,5 +159,268 @@ describe("Settings page", () => {
         })
       );
     });
+
+    expect(localStorage.getItem("theme-mode")).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("saves theme locally without calling preferences API when only theme changes", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
+    });
+
+    await user.click(screen.getByLabelText("Dark"));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("theme-mode")).toBe("dark");
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+    });
+
+    expect(mockInvoke).toHaveBeenCalledTimes(1);
+    expect(mockInvoke).toHaveBeenCalledWith("get_preferences");
+  });
+
+  it("applies theme preview without persisting before save", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
+    });
+
+    await user.click(screen.getByLabelText("Dark"));
+
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(localStorage.getItem("theme-mode")).toBeNull();
+  });
+
+  it("prompts on exit when theme changed but not saved", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
+    });
+
+    await user.click(screen.getByLabelText("Dark"));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "不保存退出" }));
+    expect(screen.getByText("Main")).toBeInTheDocument();
+  });
+
+  it("can reopen exit prompt after closing it", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
+    });
+
+    await user.click(screen.getByLabelText("Dark"));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByText("有未保存的配置")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+  });
+
+  it("can reopen exit prompt after closing with Escape", async () => {
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Save path")).toHaveValue("/downloads");
+    });
+
+    await user.click(screen.getByLabelText("Dark"));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByText("有未保存的配置")).not.toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
   });
 });

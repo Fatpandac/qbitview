@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeftIcon, SaveIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { isMacOS } from "@/lib/platform";
 import { cn } from "@/lib/utils";
-import { useLocation, useNavigate } from "react-router";
+import { useBlocker, useLocation, useNavigate } from "react-router";
 import { CommandPalette } from "@/components/CommandPalette";
 import { parseSettingsTargetFromSearch } from "@/components/command-palette.utils";
+import { applyTheme, getThemeMode, setThemeMode, type ThemeMode } from "@/lib/theme";
 
 interface PreferencesPayload {
   save_path?: string;
@@ -40,6 +42,7 @@ interface PreferencesPayload {
 }
 
 type SettingsForm = {
+  theme: ThemeMode;
   savePath: string;
   tempPathEnabled: boolean;
   tempPath: string;
@@ -69,6 +72,7 @@ type SettingsForm = {
 };
 
 const emptyForm: SettingsForm = {
+  theme: "system",
   savePath: "",
   tempPathEnabled: false,
   tempPath: "",
@@ -114,8 +118,9 @@ function parseNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function mapPreferencesToForm(prefs: PreferencesPayload): SettingsForm {
+function mapPreferencesToForm(prefs: PreferencesPayload, theme: ThemeMode): SettingsForm {
   return {
+    theme,
     savePath: prefs.save_path ?? "",
     tempPathEnabled: toBool(prefs.temp_path_enabled, false),
     tempPath: prefs.temp_path ?? "",
@@ -176,6 +181,10 @@ function buildPreferencesPayload(form: SettingsForm): PreferencesPayload {
   };
 }
 
+function hasUnsavedChanges(current: SettingsForm, base: SettingsForm) {
+  return JSON.stringify(current) !== JSON.stringify(base);
+}
+
 function Settings() {
   const headerLeftPadding = isMacOS() ? "76px" : "16px";
   const location = useLocation();
@@ -185,7 +194,10 @@ function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<SettingsForm>(emptyForm);
+  const initialRef = useRef<SettingsForm>(emptyForm);
   const returnTo =
     typeof location.state === "object" &&
     location.state !== null &&
@@ -195,6 +207,10 @@ function Settings() {
       : "/main";
 
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(initial), [form, initial]);
+  const isPreferencesDirty = useMemo(
+    () => JSON.stringify(buildPreferencesPayload(form)) !== JSON.stringify(buildPreferencesPayload(initial)),
+    [form, initial],
+  );
 
   useEffect(() => {
     let active = true;
@@ -203,7 +219,9 @@ function Settings() {
     invoke<PreferencesPayload>("get_preferences")
       .then((prefs) => {
         if (!active) return;
-        const next = mapPreferencesToForm(prefs);
+        const next = mapPreferencesToForm(prefs, getThemeMode());
+        formRef.current = next;
+        initialRef.current = next;
         setForm(next);
         setInitial(next);
       })
@@ -219,18 +237,6 @@ function Settings() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      navigate(returnTo);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [navigate, returnTo]);
 
   useEffect(() => {
     const targetId = parseSettingsTargetFromSearch(location.search);
@@ -250,32 +256,137 @@ function Settings() {
   }, [location.search, loading]);
 
   function update<K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const next = { ...formRef.current, [key]: value } as SettingsForm;
+    formRef.current = next;
+    setForm(next);
   }
 
-  async function handleSave() {
+  function updateTheme(value: ThemeMode) {
+    update("theme", value);
+    applyTheme(value);
+  }
+
+  const saveChanges = useCallback(async () => {
     setSaving(true);
     setMessage(null);
     try {
-      const payload = buildPreferencesPayload(form);
-      await invoke("set_preferences", { preferences: payload });
+      if (isPreferencesDirty) {
+        const payload = buildPreferencesPayload(form);
+        await invoke("set_preferences", { preferences: payload });
+      }
+      setThemeMode(form.theme);
+      formRef.current = form;
+      initialRef.current = form;
       setInitial(form);
       setMessage("Saved");
+      return true;
     } catch (err) {
       setMessage(`Save failed: ${err}`);
+      return false;
     } finally {
       setSaving(false);
     }
+  }, [form, isPreferencesDirty]);
+
+  const blocker = useBlocker(
+    useCallback(
+      () => hasUnsavedChanges(formRef.current, initialRef.current),
+      [],
+    ),
+  );
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    setExitPromptOpen(true);
+  }, [blocker.state]);
+
+  async function handleExitSaveAndLeave() {
+    const saved = await saveChanges();
+    if (!saved) {
+      setExitPromptOpen(false);
+      blocker.reset?.();
+      return;
+    }
+    setExitPromptOpen(false);
+    blocker.proceed?.();
+  }
+
+  function handleExitDiscardAndLeave() {
+    applyTheme(initialRef.current.theme);
+    setExitPromptOpen(false);
+    blocker.proceed?.();
+  }
+
+  function handleExitPromptOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
+      setExitPromptOpen(true);
+      return;
+    }
+    if (blocker.state === "blocked") {
+      blocker.reset?.();
+    }
+    setExitPromptOpen(false);
+  }
+
+  useEffect(() => {
+    if (!exitPromptOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      handleExitPromptOpenChange(false);
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+    };
+  }, [exitPromptOpen, blocker.state]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (exitPromptOpen) return;
+      event.preventDefault();
+      navigate(returnTo);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [exitPromptOpen, navigate, returnTo]);
+
+  async function handleSave() {
+    await saveChanges();
   }
 
   function handleReset() {
+    formRef.current = initialRef.current;
     setForm(initial);
+    applyTheme(initial.theme);
     setMessage(null);
   }
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground">
       <CommandPalette />
+      <Dialog open={exitPromptOpen} onOpenChange={handleExitPromptOpenChange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>有未保存的配置</DialogTitle>
+            <DialogDescription>
+              你有未保存的修改，是否保存后再退出设置？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleExitDiscardAndLeave} disabled={saving}>
+              不保存退出
+            </Button>
+            <Button onClick={() => void handleExitSaveAndLeave()} disabled={saving}>
+              保存并退出
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <header
           data-tauri-drag-region
@@ -313,6 +424,56 @@ function Settings() {
                 {message}
               </div>
             )}
+
+            <section className="rounded-lg border bg-card">
+              <div className="border-b px-4 py-3">
+                <h2 className="text-sm font-semibold">Appearance</h2>
+                <p className="text-xs text-muted-foreground">Choose app theme</p>
+              </div>
+              <div className="p-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Theme</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label htmlFor="theme-light" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="theme-light"
+                        type="radio"
+                        name="theme"
+                        className="size-4 accent-primary"
+                        checked={form.theme === "light"}
+                        onChange={() => updateTheme("light")}
+                        disabled={loading}
+                      />
+                      Light
+                    </label>
+                    <label htmlFor="theme-dark" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="theme-dark"
+                        type="radio"
+                        name="theme"
+                        className="size-4 accent-primary"
+                        checked={form.theme === "dark"}
+                        onChange={() => updateTheme("dark")}
+                        disabled={loading}
+                      />
+                      Dark
+                    </label>
+                    <label htmlFor="theme-system" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="theme-system"
+                        type="radio"
+                        name="theme"
+                        className="size-4 accent-primary"
+                        checked={form.theme === "system"}
+                        onChange={() => updateTheme("system")}
+                        disabled={loading}
+                      />
+                      Follow system
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">

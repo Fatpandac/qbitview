@@ -30,6 +30,7 @@ function getTypePriority(currentPath: string | undefined, item: CommandPaletteIt
 }
 
 export const SETTINGS_COMMANDS: Array<{ id: SettingsTargetId; title: string; subtitle: string }> = [
+  { id: "theme", title: "Settings: Theme", subtitle: "Choose light, dark, or follow system" },
   { id: "savePath", title: "Settings: Save path", subtitle: "Jump to the default download location" },
   { id: "tempPath", title: "Settings: Temporary path", subtitle: "Jump to incomplete download storage" },
   { id: "listenPort", title: "Settings: Listen port", subtitle: "Jump to the incoming connection port" },

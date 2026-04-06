@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { scan } from "react-scan";
 import router from "./router";
+import { initTheme } from "./lib/theme";
 
 scan({
   enabled: true,
@@ -12,6 +13,8 @@ scan({
 if (import.meta.env.DEV) {
   import("react-grab");
 }
+
+initTheme();
 
 window.addEventListener("keydown", (event) => {
   if (event.metaKey && (event.key === "," || event.code === "Comma")) {
