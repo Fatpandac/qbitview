@@ -64,7 +64,7 @@ export function ExitDialog() {
             checked={remember}
             onChange={(e) => setRemember(e.currentTarget.checked)}
           />
-          Remember my choice (can be changed in Settings)
+          Remember my choice
         </label>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleChoice("minimize")}>

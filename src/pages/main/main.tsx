@@ -137,6 +137,24 @@ function Main() {
   }, [location.search]);
 
   useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey || event.key.toLowerCase() !== "n") return;
+      const target = event.target as HTMLElement | null;
+      const isEditable =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        target?.isContentEditable;
+      if (isEditable) return;
+      event.preventDefault();
+      setDropFile(null);
+      setShowAddModal(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
     const targetHash = parseTorrentFromSearch(location.search);
     if (targetHash !== dismissedTorrentHash) {
       setDismissedTorrentHash(null);

@@ -36,6 +36,16 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
     };
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   async function handleSubmit() {
     setError("");
     setLoading(true);
