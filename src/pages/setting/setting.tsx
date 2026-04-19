@@ -11,6 +11,7 @@ import { useBlocker, useLocation, useNavigate } from "react-router";
 import { CommandPalette } from "@/components/CommandPalette";
 import { parseSettingsTargetFromSearch } from "@/components/command-palette.utils";
 import { applyTheme, getThemeMode, setThemeMode, type ThemeMode } from "@/lib/theme";
+import { getCloseAction, setCloseAction, type CloseAction } from "@/lib/close-action";
 
 interface PreferencesPayload {
   save_path?: string;
@@ -43,6 +44,7 @@ interface PreferencesPayload {
 
 type SettingsForm = {
   theme: ThemeMode;
+  closeAction: CloseAction;
   savePath: string;
   tempPathEnabled: boolean;
   tempPath: string;
@@ -73,6 +75,7 @@ type SettingsForm = {
 
 const emptyForm: SettingsForm = {
   theme: "system",
+  closeAction: "ask",
   savePath: "",
   tempPathEnabled: false,
   tempPath: "",
@@ -118,9 +121,14 @@ function parseNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function mapPreferencesToForm(prefs: PreferencesPayload, theme: ThemeMode): SettingsForm {
+function mapPreferencesToForm(
+  prefs: PreferencesPayload,
+  theme: ThemeMode,
+  closeAction: CloseAction,
+): SettingsForm {
   return {
     theme,
+    closeAction,
     savePath: prefs.save_path ?? "",
     tempPathEnabled: toBool(prefs.temp_path_enabled, false),
     tempPath: prefs.temp_path ?? "",
@@ -219,7 +227,7 @@ function Settings() {
     invoke<PreferencesPayload>("get_preferences")
       .then((prefs) => {
         if (!active) return;
-        const next = mapPreferencesToForm(prefs, getThemeMode());
+        const next = mapPreferencesToForm(prefs, getThemeMode(), getCloseAction());
         formRef.current = next;
         initialRef.current = next;
         setForm(next);
@@ -275,6 +283,7 @@ function Settings() {
         await invoke("set_preferences", { preferences: payload });
       }
       setThemeMode(form.theme);
+      setCloseAction(form.closeAction);
       formRef.current = form;
       initialRef.current = form;
       setInitial(form);
@@ -469,6 +478,56 @@ function Settings() {
                         disabled={loading}
                       />
                       Follow system
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-lg border bg-card">
+              <div className="border-b px-4 py-3">
+                <h2 className="text-sm font-semibold">Close behavior</h2>
+                <p className="text-xs text-muted-foreground">What happens when the window is closed</p>
+              </div>
+              <div className="p-4">
+                <div id="closeAction" tabIndex={-1} className="space-y-2 outline-none">
+                  <p className="text-sm font-medium">On close</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label htmlFor="closeAction-ask" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="closeAction-ask"
+                        type="radio"
+                        name="closeAction"
+                        className="size-4 accent-primary"
+                        checked={form.closeAction === "ask"}
+                        onChange={() => update("closeAction", "ask")}
+                        disabled={loading}
+                      />
+                      Ask every time
+                    </label>
+                    <label htmlFor="closeAction-exit" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="closeAction-exit"
+                        type="radio"
+                        name="closeAction"
+                        className="size-4 accent-primary"
+                        checked={form.closeAction === "exit"}
+                        onChange={() => update("closeAction", "exit")}
+                        disabled={loading}
+                      />
+                      Quit application
+                    </label>
+                    <label htmlFor="closeAction-minimize" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="closeAction-minimize"
+                        type="radio"
+                        name="closeAction"
+                        className="size-4 accent-primary"
+                        checked={form.closeAction === "minimize"}
+                        onChange={() => update("closeAction", "minimize")}
+                        disabled={loading}
+                      />
+                      Run in background
                     </label>
                   </div>
                 </div>

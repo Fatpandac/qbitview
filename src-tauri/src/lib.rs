@@ -6,7 +6,7 @@ use serde::Serialize;
 use tauri::async_runtime::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WindowEvent};
 use std::sync::Arc;
 
 const TRAY_ID: &str = "transfer-monitor";
@@ -583,6 +583,18 @@ async fn set_preferences(preferences: Preferences) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn exit_app<R: Runtime>(app: AppHandle<R>) {
+    app.exit(0);
+}
+
+#[tauri::command]
+fn hide_main_window<R: Runtime>(app: AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+}
+
+#[tauri::command]
 async fn export_torrent(hash: String) -> Result<Vec<u8>, String> {
     let client = CLIENT.lock().await;
     if let Some(ref c) = *client {
@@ -600,6 +612,14 @@ pub fn run() {
         .setup(|app| {
             setup_tray(app)?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.app_handle().emit("close-requested", ());
+                }
+            }
         })
         .on_menu_event(|app, event| match event.id().as_ref() {
             TRAY_SHOW_ID => show_main_window(app),
@@ -644,6 +664,8 @@ pub fn run() {
             get_preferences,
             set_preferences,
             update_transfer_monitor_title,
+            exit_app,
+            hide_main_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

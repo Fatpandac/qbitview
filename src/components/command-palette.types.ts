@@ -2,6 +2,7 @@ import type { FilterKey, Torrent } from "@/pages/main/types";
 
 export type SettingsTargetId =
   | "theme"
+  | "closeAction"
   | "savePath"
   | "tempPath"
   | "listenPort"

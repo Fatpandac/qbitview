@@ -37,6 +37,9 @@ describe("CommandPalette", () => {
     await user.type(input, "ubuntu");
     await user.keyboard("{Enter}");
 
-    expect(navigateMock).toHaveBeenCalledWith("/main?torrent=abc123&filter=all");
+    expect(navigateMock).toHaveBeenCalledWith(
+      "/main?torrent=abc123&filter=all",
+      { state: { paletteFrom: "/" } },
+    );
   });
 });
