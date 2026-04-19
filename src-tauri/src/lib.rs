@@ -4,6 +4,8 @@ use qbit_rs::Qbit;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::Serialize;
 use tauri::async_runtime::Mutex;
+#[cfg(target_os = "macos")]
+use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WindowEvent};
@@ -83,15 +85,32 @@ fn setup_tray<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .tooltip("qbitview");
 
-    if let Some(icon) = app_handle.default_window_icon().cloned() {
-        tray_builder = tray_builder.icon(icon);
-    }
-
+    // macOS: use a monochrome template icon so the menu bar glyph renders
+    // correctly in both light and dark modes.
+    // Other platforms: keep the full-color app icon.
     #[cfg(target_os = "macos")]
     {
+        let tray_icon_bytes: &[u8] = include_bytes!("../icons/tray-icon@2x.png");
+        match Image::from_bytes(tray_icon_bytes) {
+            Ok(image) => {
+                tray_builder = tray_builder.icon(image);
+            }
+            Err(_) => {
+                if let Some(icon) = app_handle.default_window_icon().cloned() {
+                    tray_builder = tray_builder.icon(icon);
+                }
+            }
+        }
         tray_builder = tray_builder
             .title(build_transfer_status_title(None, None))
             .icon_as_template(true);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let Some(icon) = app_handle.default_window_icon().cloned() {
+            tray_builder = tray_builder.icon(icon);
+        }
     }
 
     let _ = tray_builder.build(app)?;

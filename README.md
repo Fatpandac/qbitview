@@ -1,6 +1,14 @@
-# qbitview
+<div align="center">
+  <img src="https://github.com/Fatpandac/qbitview/blob/main/assets/qbitview-logo.svg?raw=true" width="128" height="128" alt="qbitview logo" />
 
-[中文说明](./README_CN.md)
+  <h1>qbitview</h1>
+
+  <p><strong>A modern qBittorrent desktop client built with Tauri, React, and TypeScript.</strong></p>
+
+  <p>
+    <a href="./README_CN.md">中文说明</a>
+  </p>
+</div>
 
 ![screenshot](https://github.com/Fatpandac/qbitview/blob/main/assets/screenshot.png?raw=true)
 
