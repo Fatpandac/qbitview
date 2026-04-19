@@ -45,7 +45,9 @@ export function ExitDialog() {
   function handleChoice(action: RememberableAction) {
     if (remember) setCloseAction(action);
     setOpen(false);
-    performAction(action);
+    // Wait for the Radix close animation (duration-200 in dialog.tsx) to finish
+    // before hiding/exiting; otherwise the next reopen replays the closing animation.
+    window.setTimeout(() => performAction(action), 220);
   }
 
   return (

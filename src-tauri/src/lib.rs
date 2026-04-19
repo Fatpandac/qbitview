@@ -6,7 +6,7 @@ use serde::Serialize;
 use tauri::async_runtime::Mutex;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, Runtime, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WindowEvent};
 use std::sync::Arc;
 
 const TRAY_ID: &str = "transfer-monitor";
@@ -667,8 +667,13 @@ pub fn run() {
             exit_app,
             hide_main_window,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|app, event| {
+            if let RunEvent::Reopen { has_visible_windows: false, .. } = event {
+                show_main_window(app);
+            }
+        });
 }
 
 #[cfg(test)]
