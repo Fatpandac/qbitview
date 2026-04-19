@@ -2,16 +2,12 @@ import "./App.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router";
-import { scan } from "react-scan";
 import router from "./router";
 import { initTheme } from "./lib/theme";
 import { ExitDialog } from "./components/ExitDialog";
 
-scan({
-  enabled: true,
-});
-
 if (import.meta.env.DEV) {
+  import("react-scan").then(({ scan }) => scan({ enabled: true }));
   import("react-grab");
 }
 
