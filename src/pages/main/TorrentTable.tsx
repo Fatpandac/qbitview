@@ -4,6 +4,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent } from "./types";
 import { formatBytes, formatEta, formatSpeed, getStateLabel } from "./utils";
 import { TorrentContextMenu } from "./TorrentContextMenu";
+import { useI18n } from "@/lib/language";
 
 function ProgressBar({ value }: { value?: number }) {
   const pct = Math.min(100, Math.max(0, (value ?? 0) * 100));
@@ -44,15 +45,16 @@ export function TorrentTable({
   globalUpLimit = 0,
   onRefreshGlobalLimits,
 }: TorrentTableProps) {
+  const tLabels = useI18n();
   const allSelected = torrents.length > 0 && torrents.every((t) => selected.has(t.hash ?? ""));
   const someSelected = !allSelected && torrents.some((t) => selected.has(t.hash ?? ""));
 
   return (
     <ScrollArea className="flex-1">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full min-w-[1120px] table-fixed text-sm border-collapse">
         <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm select-none">
           <tr className="text-muted-foreground text-xs uppercase tracking-wide">
-            <th className="px-3 py-2 w-8">
+            <th className="px-3 py-2 w-10">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -61,33 +63,33 @@ export function TorrentTable({
                 className="size-4 cursor-pointer accent-primary"
               />
             </th>
-            <th className="text-left px-2 py-2 font-medium w-1/3">Name</th>
-            <th className="text-right px-3 py-2 font-medium w-20">Size</th>
-            <th className="text-left px-3 py-2 font-medium w-28">Progress</th>
-            <th className="text-left px-3 py-2 font-medium w-28">Status</th>
-            <th className="text-right px-3 py-2 font-medium w-24">
+            <th className="w-[280px] px-2 py-2 text-left font-medium whitespace-nowrap">{tLabels.tableName}</th>
+            <th className="w-24 px-3 py-2 text-right font-medium whitespace-nowrap">{tLabels.tableSize}</th>
+            <th className="w-32 px-3 py-2 text-left font-medium whitespace-nowrap">{tLabels.tableProgress}</th>
+            <th className="w-32 px-3 py-2 text-left font-medium whitespace-nowrap">{tLabels.tableStatus}</th>
+            <th className="w-28 px-3 py-2 text-right font-medium whitespace-nowrap">
               <span className="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap">
                 <ArrowDownIcon className="size-3.5 shrink-0" />
-                <span>Speed</span>
+                <span>{tLabels.tableSpeed}</span>
               </span>
             </th>
-            <th className="text-right px-3 py-2 font-medium w-24">
+            <th className="w-28 px-3 py-2 text-right font-medium whitespace-nowrap">
               <span className="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap">
                 <ArrowUpIcon className="size-3.5 shrink-0" />
-                <span>Speed</span>
+                <span>{tLabels.tableSpeed}</span>
               </span>
             </th>
-            <th className="text-right px-3 py-2 font-medium w-16">Seeds</th>
-            <th className="text-right px-3 py-2 font-medium w-16">Peers</th>
-            <th className="text-right px-3 py-2 font-medium w-20">ETA</th>
-            <th className="text-right px-3 py-2 font-medium w-16">Ratio</th>
+            <th className="w-20 px-3 py-2 text-right font-medium whitespace-nowrap">{tLabels.tableSeeds}</th>
+            <th className="w-20 px-3 py-2 text-right font-medium whitespace-nowrap">{tLabels.tablePeers}</th>
+            <th className="w-24 px-3 py-2 text-right font-medium whitespace-nowrap">{tLabels.tableEta}</th>
+            <th className="w-20 px-3 py-2 text-right font-medium whitespace-nowrap">{tLabels.tableRatio}</th>
           </tr>
         </thead>
         <tbody>
           {torrents.length === 0 && (
             <tr>
               <td colSpan={11} className="text-center py-16 text-muted-foreground">
-                No torrents found
+                {tLabels.noTorrentsFound}
               </td>
             </tr>
           )}
@@ -119,13 +121,13 @@ export function TorrentTable({
                     className="size-4 cursor-pointer accent-primary"
                   />
                 </td>
-                <td className="px-2 py-2 truncate max-w-0">
+                <td className="px-2 py-2 truncate">
                   <div className="min-w-0">
                     <span className="truncate block select-text" title={t.name ?? ""}>
                       {t.name ?? "—"}
                     </span>
-                    <span className="mt-0.5 truncate block text-xs text-muted-foreground" title={t.category || "未分类"}>
-                      {t.category || "未分类"}
+                    <span className="mt-0.5 truncate block text-xs text-muted-foreground" title={t.category || tLabels.uncategorized}>
+                      {t.category || tLabels.uncategorized}
                     </span>
                   </div>
                 </td>

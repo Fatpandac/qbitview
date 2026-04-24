@@ -6,6 +6,7 @@ import { Navigate } from "react-router";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
 import useUser from "./sotres/user";
 import router from "./router";
+import { useI18n } from "./lib/language";
 
 const DEV_DOMAIN = import.meta.env.VITE_DEV_DOMAIN as string | undefined;
 const DEV_USERNAME = import.meta.env.VITE_DEV_USERNAME as string | undefined;
@@ -13,6 +14,7 @@ const DEV_PASSWORD = import.meta.env.VITE_DEV_PASSWORD as string | undefined;
 const DEV_AUTO_LOGIN = import.meta.env.DEV && DEV_DOMAIN && DEV_USERNAME && DEV_PASSWORD;
 
 function App() {
+  const t = useI18n();
   const { authorized, setAuthorized } = useUser();
   const [loginMsg, setLoginMsg] = useState("");
   const [loginInfo, setLoginInfo] = useState({
@@ -32,7 +34,7 @@ function App() {
           setAuthorized(true);
           router.navigate("/main");
         })
-        .catch((e) => setLoginMsg("Auto-login failed: " + e));
+        .catch((e) => setLoginMsg(`${t.autoLoginFailed}: ${e}`));
     }
   }, []);
 
@@ -47,7 +49,7 @@ function App() {
       setAuthorized(true);
       router.navigate("/main");
     } catch (e) {
-      setLoginMsg("Login failed: " + e);
+      setLoginMsg(`${t.loginFailed}: ${e}`);
       let timer = setTimeout(() => {
         setLoginMsg("");
         clearTimeout(timer);
@@ -67,7 +69,7 @@ function App() {
       <h1 data-tauri-drag-region className="pointer-events-none select-none">qBitView</h1>
 
       <p data-tauri-drag-region className="pointer-events-none select-none">
-        A qbittorrent client via Tauri
+        {t.loginDescription}
       </p>
 
       <form
@@ -87,7 +89,7 @@ function App() {
                 domain: e.currentTarget.value,
               })
             }
-            placeholder="Enter domain (with http/https) ..."
+            placeholder={t.domainPlaceholder}
           />
           <Input
             defaultValue={loginInfo.username}
@@ -97,7 +99,7 @@ function App() {
                 username: e.currentTarget.value,
               })
             }
-            placeholder="Enter a username..."
+            placeholder={t.usernamePlaceholder}
           />
           <Input
             type="password"
@@ -108,16 +110,16 @@ function App() {
                 password: e.currentTarget.value,
               })
             }
-            placeholder="Enter a password..."
+            placeholder={t.passwordPlaceholder}
           />
         </div>
         <Button className="h-full flex-1" type="submit">
-          Login
+          {t.login}
         </Button>
       </form>
       {DEV_AUTO_LOGIN && (
         <p className="text-xs text-muted-foreground">
-          Dev mode: auto-logging in as <span className="font-medium">{DEV_USERNAME}</span> @ {DEV_DOMAIN}
+          {t.devAutoLogin} <span className="font-medium">{DEV_USERNAME}</span> @ {DEV_DOMAIN}
         </p>
       )}
       <Alert
@@ -125,7 +127,7 @@ function App() {
         className="fixed bottom-4 right-4 w-80"
         hidden={!loginMsg}
       >
-        <AlertTitle>Login failed</AlertTitle>
+        <AlertTitle>{t.loginFailed}</AlertTitle>
         <AlertDescription>{loginMsg}</AlertDescription>
       </Alert>
     </main>

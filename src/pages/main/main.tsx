@@ -17,6 +17,7 @@ import useMainStore from "@/sotres/main";
 import { CommandPalette } from "@/components/CommandPalette";
 import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
 import router from "@/router";
+import { useI18n } from "@/lib/language";
 
 export function getRestorableTorrentFromSearch({
   targetHash,
@@ -32,6 +33,7 @@ export function getRestorableTorrentFromSearch({
 }
 
 function Main() {
+  const t = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const { torrents, transferInfo, version, setTorrents, setTransferInfo, setVersion } = useMainStore();
@@ -229,7 +231,7 @@ function Main() {
       {isDragging && (
         <div className="absolute inset-0 z-50 bg-primary/10 border-4 border-dashed border-primary rounded-lg m-2 pointer-events-none flex flex-col items-center justify-center gap-3">
           <UploadIcon className="size-14 text-primary" />
-          <p className="text-lg font-semibold text-primary">Drop .torrent file to add</p>
+          <p className="text-lg font-semibold text-primary">{t.dropTorrentFile}</p>
         </div>
       )}
 

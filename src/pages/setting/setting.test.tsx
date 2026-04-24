@@ -218,6 +218,62 @@ describe("Settings page", () => {
     expect(mockInvoke).toHaveBeenCalledWith("get_preferences");
   });
 
+  it("loads and saves the app language locally", async () => {
+    localStorage.setItem("app-language", "zh-CN");
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "get_preferences") {
+        return Promise.resolve({
+          save_path: "/downloads",
+          temp_path_enabled: false,
+          temp_path: "",
+          start_paused_enabled: false,
+          preallocate_all: false,
+          max_active_downloads: 3,
+          max_active_uploads: 2,
+          max_active_torrents: 4,
+          max_connec: 100,
+          max_connec_per_torrent: 50,
+          max_uploads: 20,
+          max_uploads_per_torrent: 10,
+          dl_limit: 0,
+          up_limit: 0,
+          listen_port: 6881,
+          random_port: false,
+          upnp: true,
+          dht: true,
+          pex: true,
+          lsd: true,
+          encryption: 0,
+          max_ratio_enabled: false,
+          max_ratio: 1.5,
+          max_ratio_act: 2,
+          max_seeding_time_enabled: false,
+          max_seeding_time: 120,
+        });
+      }
+      return Promise.resolve();
+    });
+
+    const user = userEvent.setup();
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "设置" })).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText("中文")).toBeChecked();
+    await user.click(screen.getByLabelText("English"));
+    expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem("app-language")).toBe("en");
+    });
+
+    expect(mockInvoke).toHaveBeenCalledTimes(1);
+    expect(mockInvoke).toHaveBeenCalledWith("get_preferences");
+  });
+
   it("applies theme preview without persisting before save", async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "get_preferences") {
@@ -311,8 +367,8 @@ describe("Settings page", () => {
     await user.click(screen.getByLabelText("Dark"));
     await user.click(screen.getByRole("button", { name: "Back" }));
 
-    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "不保存退出" }));
+    expect(screen.getByText("Unsaved settings")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Leave without saving" }));
     expect(screen.getByText("Main")).toBeInTheDocument();
   });
 
@@ -360,13 +416,13 @@ describe("Settings page", () => {
 
     await user.click(screen.getByLabelText("Dark"));
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved settings")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close" }));
-    expect(screen.queryByText("有未保存的配置")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unsaved settings")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved settings")).toBeInTheDocument();
   });
 
   it("can reopen exit prompt after closing with Escape", async () => {
@@ -413,14 +469,14 @@ describe("Settings page", () => {
 
     await user.click(screen.getByLabelText("Dark"));
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved settings")).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     await waitFor(() => {
-      expect(screen.queryByText("有未保存的配置")).not.toBeInTheDocument();
+      expect(screen.queryByText("Unsaved settings")).not.toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("有未保存的配置")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved settings")).toBeInTheDocument();
   });
 });

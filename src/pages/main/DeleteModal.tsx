@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/language";
 
 interface DeleteModalProps {
   count: number;
@@ -8,6 +9,7 @@ interface DeleteModalProps {
 }
 
 export function DeleteModal({ count, onClose, onConfirm }: DeleteModalProps) {
+  const t = useI18n();
   const [deleteFiles, setDeleteFiles] = useState(false);
 
   return (
@@ -20,10 +22,10 @@ export function DeleteModal({ count, onClose, onConfirm }: DeleteModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-semibold text-base">
-          Delete Torrent{count > 1 ? "s" : ""}
+          {t.deleteTorrentTitle(count)}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Remove {count} torrent{count > 1 ? "s" : ""}?
+          {t.removeTorrentQuestion(count)}
         </p>
         <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
           <input
@@ -32,14 +34,14 @@ export function DeleteModal({ count, onClose, onConfirm }: DeleteModalProps) {
             onChange={(e) => setDeleteFiles(e.target.checked)}
             className="rounded"
           />
-          Also delete downloaded files
+          {t.alsoDeleteFiles}
         </label>
         <div className="flex gap-2 justify-end">
           <Button size="sm" variant="outline" onClick={onClose}>
-            Cancel
+            {t.cancel}
           </Button>
           <Button size="sm" variant="destructive" onClick={() => onConfirm(deleteFiles)}>
-            Delete
+            {t.toolbarDelete}
           </Button>
         </div>
       </div>

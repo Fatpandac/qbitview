@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/language";
 import { CirclePauseIcon, CirclePlayIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 interface ToolbarProps {
@@ -18,6 +19,7 @@ export function Toolbar({
   onResume,
   onDelete,
 }: ToolbarProps) {
+  const t = useI18n();
   const hasSelection = selectedCount > 0;
 
   return (
@@ -28,28 +30,28 @@ export function Toolbar({
     >
       <Button size="sm" onClick={onAdd}>
         <PlusIcon className="size-4" />
-        Add
+        {t.toolbarAdd}
       </Button>
 
       <div className="w-px h-5 bg-border mx-1" />
 
       <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onPause}>
         <CirclePauseIcon className="size-4" />
-        Pause
+        {t.toolbarPause}
       </Button>
       <Button size="sm" variant="outline" disabled={!hasSelection} onClick={onResume}>
         <CirclePlayIcon className="size-4" />
-        Resume
+        {t.toolbarResume}
       </Button>
       <Button size="sm" variant="destructive" disabled={!hasSelection} onClick={onDelete}>
         <Trash2Icon className="size-4" />
-        Delete
+        {t.toolbarDelete}
       </Button>
 
       <div className="ml-auto flex items-center gap-2">
         <span data-tauri-drag-region className="text-xs text-muted-foreground select-none pointer-events-none">
-          {totalCount} torrents
-          {hasSelection && ` · ${selectedCount} selected`}
+          {t.torrentCount(totalCount)}
+          {hasSelection && ` · ${t.selectedCount(selectedCount)}`}
         </span>
       </div>
     </div>

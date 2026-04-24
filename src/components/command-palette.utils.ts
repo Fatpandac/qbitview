@@ -1,6 +1,7 @@
 import { Fzf } from "fzf";
 import type { FilterKey } from "@/pages/main/types";
 import type { CommandPaletteContext, CommandPaletteItem, SettingsTargetId } from "./command-palette.types";
+import { getLanguage, i18n } from "@/lib/language";
 
 function normalize(value: string) {
   return value.toLowerCase().trim();
@@ -29,28 +30,39 @@ function getTypePriority(currentPath: string | undefined, item: CommandPaletteIt
   return 2;
 }
 
-export const SETTINGS_COMMANDS: Array<{ id: SettingsTargetId; title: string; subtitle: string }> = [
-  { id: "theme", title: "Settings: Theme", subtitle: "Choose light, dark, or follow system" },
-  { id: "closeAction", title: "Settings: Close behavior", subtitle: "Choose what happens when the window is closed" },
-  { id: "savePath", title: "Settings: Save path", subtitle: "Jump to the default download location" },
-  { id: "tempPath", title: "Settings: Temporary path", subtitle: "Jump to incomplete download storage" },
-  { id: "listenPort", title: "Settings: Listen port", subtitle: "Jump to the incoming connection port" },
-  { id: "downloadLimit", title: "Settings: Download limit", subtitle: "Jump to the global download rate limit" },
-  { id: "uploadLimit", title: "Settings: Upload limit", subtitle: "Jump to the global upload rate limit" },
-  { id: "maxActiveDownloads", title: "Settings: Max active downloads", subtitle: "Jump to queue limits" },
-  { id: "maxConnections", title: "Settings: Max connections", subtitle: "Jump to connection limits" },
-  { id: "encryption", title: "Settings: Encryption mode", subtitle: "Jump to BitTorrent protocol privacy" },
-  { id: "maxRatio", title: "Settings: Maximum ratio", subtitle: "Jump to seeding stop conditions" },
-  { id: "maxSeedingTime", title: "Settings: Seeding time", subtitle: "Jump to the seeding time limit" },
+const SETTING_TARGET_IDS: SettingsTargetId[] = [
+  "theme",
+  "closeAction",
+  "savePath",
+  "tempPath",
+  "listenPort",
+  "downloadLimit",
+  "uploadLimit",
+  "maxActiveDownloads",
+  "maxConnections",
+  "encryption",
+  "maxRatio",
+  "maxSeedingTime",
 ];
+
+export function getSettingsCommands(): Array<{ id: SettingsTargetId; title: string; subtitle: string }> {
+  const commands = i18n[getLanguage()].settingsCommands;
+  return SETTING_TARGET_IDS.map((id) => {
+    const [title, subtitle] = commands[id];
+    return { id, title, subtitle };
+  });
+}
+
+export const SETTINGS_COMMANDS = getSettingsCommands();
 
 export function buildCommandPaletteItems(context: CommandPaletteContext, rawQuery: string) {
   const query = normalize(rawQuery);
   const items: CommandPaletteItem[] = [];
+  const t = i18n[getLanguage()];
 
   for (const torrent of context.torrents) {
     const hash = torrent.hash ?? "";
-    const name = torrent.name ?? "Unnamed torrent";
+    const name = torrent.name ?? t.unnamedTorrent;
     if (!hash) continue;
     items.push({
       id: `torrent:${hash}`,
@@ -65,8 +77,8 @@ export function buildCommandPaletteItems(context: CommandPaletteContext, rawQuer
     items.push({
       id: `filter:${filter.key}`,
       type: "filter",
-      title: `Category: ${filter.label}`,
-      subtitle: `Switch to the ${filter.label.toLowerCase()} list`,
+      title: t.commandCategoryTitle(filter.label),
+      subtitle: t.commandSwitchFilter(filter.label),
       filter: filter.key,
     });
   }
@@ -125,5 +137,5 @@ export function parseTorrentFromSearch(search: string) {
 export function parseSettingsTargetFromSearch(search: string) {
   const value = new URLSearchParams(search).get("target");
   if (!value) return null;
-  return SETTINGS_COMMANDS.some((entry) => entry.id === value) ? (value as SettingsTargetId) : null;
+  return SETTING_TARGET_IDS.includes(value as SettingsTargetId) ? (value as SettingsTargetId) : null;
 }

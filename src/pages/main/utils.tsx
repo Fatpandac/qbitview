@@ -8,6 +8,7 @@ import {
   NetworkIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { getLanguage, i18n } from "@/lib/language";
 import { FilterKey } from "./types";
 
 export const FILTERS: { key: FilterKey; label: string; icon: React.ReactNode }[] = [
@@ -28,7 +29,7 @@ export interface CategoryCount {
 
 export function normalizeCategoryLabel(category?: string | null) {
   const normalized = category?.trim();
-  return normalized ? normalized : "未分类";
+  return normalized ? normalized : i18n[getLanguage()].uncategorized;
 }
 
 export function formatBytes(bytes?: number): string {
@@ -46,7 +47,7 @@ export function formatSpeed(bytesPerSec?: number): string {
 
 export function formatEta(eta?: number): string {
   if (eta == null || eta < 0 || eta >= 8640000) return "∞";
-  if (eta === 0) return "Done";
+  if (eta === 0) return i18n[getLanguage()].done;
   const h = Math.floor(eta / 3600);
   const m = Math.floor((eta % 3600) / 60);
   const s = eta % 60;
@@ -103,40 +104,41 @@ export function filterTorrentsByCategory(
 }
 
 export function getStateLabel(state?: string): { label: string; color: string } {
+  const t = i18n[getLanguage()];
   switch (state) {
     case "downloading":
     case "forcedDL":
     case "metaDL":
-      return { label: "Downloading", color: "text-blue-500" };
+      return { label: t.stateDownloading, color: "text-blue-500" };
     case "uploading":
     case "forcedUP":
-      return { label: "Seeding", color: "text-green-500" };
+      return { label: t.stateSeeding, color: "text-green-500" };
     case "pausedDL":
     case "stoppedDL":
-      return { label: "Paused", color: "text-yellow-500" };
+      return { label: t.statePaused, color: "text-yellow-500" };
     case "pausedUP":
     case "stoppedUP":
-      return { label: "Completed", color: "text-gray-400" };
+      return { label: t.stateCompleted, color: "text-gray-400" };
     case "stalledDL":
-      return { label: "Stalled ↓", color: "text-orange-400" };
+      return { label: t.stateStalledDown, color: "text-orange-400" };
     case "stalledUP":
-      return { label: "Stalled ↑", color: "text-orange-400" };
+      return { label: t.stateStalledUp, color: "text-orange-400" };
     case "checkingDL":
     case "checkingUP":
     case "checkingResumeData":
-      return { label: "Checking", color: "text-purple-400" };
+      return { label: t.stateChecking, color: "text-purple-400" };
     case "queuedDL":
     case "queuedUP":
-      return { label: "Queued", color: "text-slate-400" };
+      return { label: t.stateQueued, color: "text-slate-400" };
     case "error":
-      return { label: "Error", color: "text-red-500" };
+      return { label: t.stateError, color: "text-red-500" };
     case "missingFiles":
-      return { label: "Missing Files", color: "text-red-500" };
+      return { label: t.stateMissingFiles, color: "text-red-500" };
     case "moving":
-      return { label: "Moving", color: "text-cyan-400" };
+      return { label: t.stateMoving, color: "text-cyan-400" };
     case "allocating":
-      return { label: "Allocating", color: "text-cyan-400" };
+      return { label: t.stateAllocating, color: "text-cyan-400" };
     default:
-      return { label: state ?? "Unknown", color: "text-muted-foreground" };
+      return { label: state ?? t.stateUnknown, color: "text-muted-foreground" };
   }
 }

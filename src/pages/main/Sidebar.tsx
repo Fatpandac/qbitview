@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { isMacOS } from "@/lib/platform";
+import { useI18n } from "@/lib/language";
 import { FilterKey } from "./types";
 import { CategoryCount, FILTERS } from "./utils";
 
@@ -37,6 +38,7 @@ export function Sidebar({
   onCategoryChange,
   onOpenSettings,
 }: SidebarProps) {
+  const t = useI18n();
   const isMac = isMacOS();
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true");
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(
@@ -80,11 +82,13 @@ export function Sidebar({
       <ScrollArea className="flex-1">
         <div className="py-2">
           <nav>
-            {FILTERS.map(({ key, label, icon }) => (
+            {FILTERS.map(({ key, icon }) => {
+              const translatedLabel = t.filters[key];
+              return (
               <button
                 key={key}
                 onClick={() => onFilterChange(key)}
-                title={collapsed ? label : undefined}
+                title={collapsed ? translatedLabel : undefined}
                 className={cn(
                   "w-full flex items-center text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                   collapsed ? "justify-center gap-1 px-2 py-2.5" : "gap-2.5 px-4 py-2",
@@ -92,7 +96,7 @@ export function Sidebar({
                 )}
               >
                 {icon}
-                {!collapsed && <span className="flex-1 text-left">{label}</span>}
+                {!collapsed && <span className="flex-1 text-left">{translatedLabel}</span>}
                 {(collapsed || counts[key] > 0) && (
                   <span className={cn(
                     "text-xs tabular-nums rounded-full leading-none",
@@ -105,7 +109,7 @@ export function Sidebar({
                   </span>
                 )}
               </button>
-            ))}
+            );})}
           </nav>
 
           {!collapsed && categories.length > 0 && (
@@ -114,12 +118,12 @@ export function Sidebar({
                 <button
                   type="button"
                   className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  aria-label={categoriesCollapsed ? "Expand categories" : "Collapse categories"}
+                  aria-label={categoriesCollapsed ? t.expandCategories : t.collapseCategories}
                   onClick={() => setCategoriesCollapsed((value) => !value)}
                 >
                   {categoriesCollapsed ? <ChevronRightIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
                   <FolderTreeIcon className="size-4 shrink-0" />
-                  <span className="truncate text-left">Categories</span>
+                  <span className="truncate text-left">{t.categories}</span>
                 </button>
               </div>
 
@@ -131,10 +135,10 @@ export function Sidebar({
                       "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
                       activeCategory === null && "bg-accent text-accent-foreground font-medium",
                     )}
-                    aria-label="All categories"
+                    aria-label={t.allCategories}
                     onClick={() => onCategoryChange(null)}
                   >
-                    <span className="flex-1 truncate text-left">All categories</span>
+                    <span className="flex-1 truncate text-left">{t.allCategories}</span>
                   </button>
                   {categories.map((category) => (
                     <button
@@ -166,8 +170,8 @@ export function Sidebar({
           <button
             type="button"
             className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Open settings"
-            title="Open settings"
+            aria-label={t.openSettings}
+            title={t.openSettings}
             onClick={onOpenSettings}
           >
             <Settings2Icon className="size-4 shrink-0" />
@@ -175,8 +179,8 @@ export function Sidebar({
           <button
             type="button"
             className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
+            aria-label={t.expandSidebar}
+            title={t.expandSidebar}
             onClick={() => setCollapsed(false)}
           >
             <PanelLeftOpenIcon className="size-4" />
@@ -187,8 +191,8 @@ export function Sidebar({
           <button
             type="button"
             className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
+            aria-label={t.collapseSidebar}
+            title={t.collapseSidebar}
             onClick={() => setCollapsed(true)}
           >
             <PanelLeftCloseIcon className="size-4" />
@@ -196,12 +200,12 @@ export function Sidebar({
           <button
             type="button"
             className="ml-auto flex items-center gap-2 rounded-md px-2.5 py-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Open settings"
-            title="Open settings"
+            aria-label={t.openSettings}
+            title={t.openSettings}
             onClick={onOpenSettings}
           >
             <Settings2Icon className="size-4 shrink-0" />
-            <span className="text-sm whitespace-nowrap">Settings</span>
+            <span className="text-sm whitespace-nowrap">{t.settings}</span>
           </button>
         </div>
       )}

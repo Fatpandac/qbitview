@@ -12,6 +12,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { parseSettingsTargetFromSearch } from "@/components/command-palette.utils";
 import { applyTheme, getThemeMode, setThemeMode, type ThemeMode } from "@/lib/theme";
 import { getCloseAction, setCloseAction, type CloseAction } from "@/lib/close-action";
+import { applyLanguage, getLanguage, setLanguage, settingsI18n, useLanguage, type Language } from "@/lib/language";
 
 interface PreferencesPayload {
   save_path?: string;
@@ -44,6 +45,7 @@ interface PreferencesPayload {
 
 type SettingsForm = {
   theme: ThemeMode;
+  language: Language;
   closeAction: CloseAction;
   savePath: string;
   tempPathEnabled: boolean;
@@ -75,6 +77,7 @@ type SettingsForm = {
 
 const emptyForm: SettingsForm = {
   theme: "system",
+  language: "en",
   closeAction: "ask",
   savePath: "",
   tempPathEnabled: false,
@@ -124,10 +127,12 @@ function parseNumber(value: string) {
 function mapPreferencesToForm(
   prefs: PreferencesPayload,
   theme: ThemeMode,
+  language: Language,
   closeAction: CloseAction,
 ): SettingsForm {
   return {
     theme,
+    language,
     closeAction,
     savePath: prefs.save_path ?? "",
     tempPathEnabled: toBool(prefs.temp_path_enabled, false),
@@ -195,6 +200,8 @@ function hasUnsavedChanges(current: SettingsForm, base: SettingsForm) {
 
 function Settings() {
   const headerLeftPadding = isMacOS() ? "76px" : "16px";
+  const currentLanguage = useLanguage();
+  const t = settingsI18n[currentLanguage];
   const location = useLocation();
   const navigate = useNavigate();
   const [form, setForm] = useState<SettingsForm>(emptyForm);
@@ -227,7 +234,7 @@ function Settings() {
     invoke<PreferencesPayload>("get_preferences")
       .then((prefs) => {
         if (!active) return;
-        const next = mapPreferencesToForm(prefs, getThemeMode(), getCloseAction());
+        const next = mapPreferencesToForm(prefs, getThemeMode(), getLanguage(), getCloseAction());
         formRef.current = next;
         initialRef.current = next;
         setForm(next);
@@ -235,7 +242,7 @@ function Settings() {
       })
       .catch((err) => {
         if (!active) return;
-        setMessage(`Failed to load settings: ${err}`);
+        setMessage(`${settingsI18n[getLanguage()].loadFailed}: ${err}`);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -274,6 +281,11 @@ function Settings() {
     applyTheme(value);
   }
 
+  function updateLanguage(value: Language) {
+    update("language", value);
+    applyLanguage(value);
+  }
+
   const saveChanges = useCallback(async () => {
     setSaving(true);
     setMessage(null);
@@ -283,19 +295,20 @@ function Settings() {
         await invoke("set_preferences", { preferences: payload });
       }
       setThemeMode(form.theme);
+      setLanguage(form.language);
       setCloseAction(form.closeAction);
       formRef.current = form;
       initialRef.current = form;
       setInitial(form);
-      setMessage("Saved");
+      setMessage(settingsI18n[form.language].saved);
       return true;
     } catch (err) {
-      setMessage(`Save failed: ${err}`);
+      setMessage(`${t.saveFailed}: ${err}`);
       return false;
     } finally {
       setSaving(false);
     }
-  }, [form, isPreferencesDirty]);
+  }, [form, isPreferencesDirty, t.saveFailed]);
 
   const blocker = useBlocker(
     useCallback(
@@ -322,6 +335,7 @@ function Settings() {
 
   function handleExitDiscardAndLeave() {
     applyTheme(initialRef.current.theme);
+    applyLanguage(initialRef.current.language);
     setExitPromptOpen(false);
     blocker.proceed?.();
   }
@@ -372,6 +386,7 @@ function Settings() {
     formRef.current = initialRef.current;
     setForm(initial);
     applyTheme(initial.theme);
+    applyLanguage(initial.language);
     setMessage(null);
   }
 
@@ -381,17 +396,17 @@ function Settings() {
       <Dialog open={exitPromptOpen} onOpenChange={handleExitPromptOpenChange}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>有未保存的配置</DialogTitle>
+            <DialogTitle>{t.unsavedTitle}</DialogTitle>
             <DialogDescription>
-              你有未保存的修改，是否保存后再退出设置？
+              {t.unsavedDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleExitDiscardAndLeave} disabled={saving}>
-              不保存退出
+              {t.discardAndLeave}
             </Button>
             <Button onClick={() => void handleExitSaveAndLeave()} disabled={saving}>
-              保存并退出
+              {t.saveAndLeave}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -408,17 +423,17 @@ function Settings() {
         >
           <Button size="sm" variant="ghost" onClick={() => navigate(returnTo)}>
             <ArrowLeftIcon className="size-4" />
-            Back
+            {t.back}
           </Button>
-          <h1 className="text-sm font-semibold">Settings</h1>
+          <h1 className="text-sm font-semibold">{t.settings}</h1>
           <div className="ml-auto flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={handleReset} disabled={!isDirty || loading || saving}>
               <RotateCcwIcon className="size-4" />
-              Reset
+              {t.reset}
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!isDirty || loading || saving}>
               <SaveIcon className="size-4" />
-              Save
+              {t.save}
             </Button>
           </div>
         </header>
@@ -428,7 +443,7 @@ function Settings() {
             {message && (
               <div className={cn(
                 "rounded-md border px-3 py-2 text-sm",
-                message.includes("失败") ? "border-destructive/40 text-destructive" : "border-primary/30 text-primary",
+                message.includes("failed") || message.includes("失败") ? "border-destructive/40 text-destructive" : "border-primary/30 text-primary",
               )}>
                 {message}
               </div>
@@ -436,12 +451,12 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Appearance</h2>
-                <p className="text-xs text-muted-foreground">Choose app theme</p>
+                <h2 className="text-sm font-semibold">{t.appearance}</h2>
+                <p className="text-xs text-muted-foreground">{t.appearanceDescription}</p>
               </div>
-              <div className="p-4">
+              <div className="p-4 space-y-4">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Theme</p>
+                  <p className="text-sm font-medium">{t.theme}</p>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <label htmlFor="theme-light" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -453,7 +468,7 @@ function Settings() {
                         onChange={() => updateTheme("light")}
                         disabled={loading}
                       />
-                      Light
+                      {t.light}
                     </label>
                     <label htmlFor="theme-dark" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -465,7 +480,7 @@ function Settings() {
                         onChange={() => updateTheme("dark")}
                         disabled={loading}
                       />
-                      Dark
+                      {t.dark}
                     </label>
                     <label htmlFor="theme-system" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -477,7 +492,36 @@ function Settings() {
                         onChange={() => updateTheme("system")}
                         disabled={loading}
                       />
-                      Follow system
+                      {t.system}
+                    </label>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t.language}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label htmlFor="language-en" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="language-en"
+                        type="radio"
+                        name="language"
+                        className="size-4 accent-primary"
+                        checked={form.language === "en"}
+                        onChange={() => updateLanguage("en")}
+                        disabled={loading}
+                      />
+                      {t.english}
+                    </label>
+                    <label htmlFor="language-zh-CN" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <input
+                        id="language-zh-CN"
+                        type="radio"
+                        name="language"
+                        className="size-4 accent-primary"
+                        checked={form.language === "zh-CN"}
+                        onChange={() => updateLanguage("zh-CN")}
+                        disabled={loading}
+                      />
+                      {t.chinese}
                     </label>
                   </div>
                 </div>
@@ -486,12 +530,12 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Close behavior</h2>
-                <p className="text-xs text-muted-foreground">What happens when the window is closed</p>
+                <h2 className="text-sm font-semibold">{t.closeBehavior}</h2>
+                <p className="text-xs text-muted-foreground">{t.closeBehaviorDescription}</p>
               </div>
               <div className="p-4">
                 <div id="closeAction" tabIndex={-1} className="space-y-2 outline-none">
-                  <p className="text-sm font-medium">On close</p>
+                  <p className="text-sm font-medium">{t.onClose}</p>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <label htmlFor="closeAction-ask" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -503,7 +547,7 @@ function Settings() {
                         onChange={() => update("closeAction", "ask")}
                         disabled={loading}
                       />
-                      Ask every time
+                      {t.askEveryTime}
                     </label>
                     <label htmlFor="closeAction-exit" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -515,7 +559,7 @@ function Settings() {
                         onChange={() => update("closeAction", "exit")}
                         disabled={loading}
                       />
-                      Quit application
+                      {t.quitApplication}
                     </label>
                     <label htmlFor="closeAction-minimize" className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
                       <input
@@ -527,7 +571,7 @@ function Settings() {
                         onChange={() => update("closeAction", "minimize")}
                         disabled={loading}
                       />
-                      Run in background
+                      {t.runInBackground}
                     </label>
                   </div>
                 </div>
@@ -536,17 +580,17 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Paths</h2>
-                <p className="text-xs text-muted-foreground">Download and temporary storage</p>
+                <h2 className="text-sm font-semibold">{t.paths}</h2>
+                <p className="text-xs text-muted-foreground">{t.pathsDescription}</p>
               </div>
               <div className="p-4 space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="savePath" className="text-sm font-medium">Save path</label>
+                  <label htmlFor="savePath" className="text-sm font-medium">{t.savePath}</label>
                   <Input
                     id="savePath"
                     value={form.savePath}
                     onChange={(e) => update("savePath", e.currentTarget.value)}
-                    placeholder="e.g. /downloads"
+                    placeholder={t.savePathPlaceholder}
                     disabled={loading}
                   />
                 </div>
@@ -560,16 +604,16 @@ function Settings() {
                     onChange={(e) => update("tempPathEnabled", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="tempPathEnabled" className="text-sm">Enable temporary path</label>
+                  <label htmlFor="tempPathEnabled" className="text-sm">{t.enableTemporaryPath}</label>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="tempPath" className="text-sm font-medium">Temporary path</label>
+                  <label htmlFor="tempPath" className="text-sm font-medium">{t.temporaryPath}</label>
                   <Input
                     id="tempPath"
                     value={form.tempPath}
                     onChange={(e) => update("tempPath", e.currentTarget.value)}
-                    placeholder="e.g. /tmp"
+                    placeholder={t.tempPathPlaceholder}
                     disabled={loading || !form.tempPathEnabled}
                   />
                 </div>
@@ -578,19 +622,19 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Connectivity</h2>
-                <p className="text-xs text-muted-foreground">Ports and connection behavior</p>
+                <h2 className="text-sm font-semibold">{t.connectivity}</h2>
+                <p className="text-xs text-muted-foreground">{t.connectivityDescription}</p>
               </div>
               <div className="p-4 grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label htmlFor="listenPort" className="text-sm font-medium">Listen port</label>
+                  <label htmlFor="listenPort" className="text-sm font-medium">{t.listenPort}</label>
                   <Input
                     id="listenPort"
                     type="number"
                     inputMode="numeric"
                     value={form.listenPort}
                     onChange={(e) => update("listenPort", e.currentTarget.value)}
-                    placeholder="e.g. 6881"
+                    placeholder={t.listenPortPlaceholder}
                     disabled={loading}
                   />
                 </div>
@@ -604,7 +648,7 @@ function Settings() {
                     onChange={(e) => update("randomPort", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="randomPort" className="text-sm">Randomize port on start</label>
+                  <label htmlFor="randomPort" className="text-sm">{t.randomizePort}</label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -616,78 +660,78 @@ function Settings() {
                     onChange={(e) => update("upnp", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="upnp" className="text-sm">Enable UPnP / NAT-PMP</label>
+                  <label htmlFor="upnp" className="text-sm">{t.enableUpnp}</label>
                 </div>
               </div>
             </section>
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Speed and Queue</h2>
-                <p className="text-xs text-muted-foreground">Global limits and active tasks</p>
+                <h2 className="text-sm font-semibold">{t.speedQueue}</h2>
+                <p className="text-xs text-muted-foreground">{t.speedQueueDescription}</p>
               </div>
               <div className="p-4 grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label htmlFor="downloadLimit" className="text-sm font-medium">Download limit (KiB/s)</label>
+                  <label htmlFor="downloadLimit" className="text-sm font-medium">{t.downloadLimit}</label>
                   <Input
                     id="downloadLimit"
                     type="number"
                     inputMode="numeric"
                     value={form.downloadLimit}
                     onChange={(e) => update("downloadLimit", e.currentTarget.value)}
-                    placeholder="0 means unlimited"
+                    placeholder={t.unlimitedPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="uploadLimit" className="text-sm font-medium">Upload limit (KiB/s)</label>
+                  <label htmlFor="uploadLimit" className="text-sm font-medium">{t.uploadLimit}</label>
                   <Input
                     id="uploadLimit"
                     type="number"
                     inputMode="numeric"
                     value={form.uploadLimit}
                     onChange={(e) => update("uploadLimit", e.currentTarget.value)}
-                    placeholder="0 means unlimited"
+                    placeholder={t.unlimitedPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxActiveDownloads" className="text-sm font-medium">Max active downloads</label>
+                  <label htmlFor="maxActiveDownloads" className="text-sm font-medium">{t.maxActiveDownloads}</label>
                   <Input
                     id="maxActiveDownloads"
                     type="number"
                     inputMode="numeric"
                     value={form.maxActiveDownloads}
                     onChange={(e) => update("maxActiveDownloads", e.currentTarget.value)}
-                    placeholder="e.g. 3"
+                    placeholder={t.maxActiveDownloadsPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxActiveUploads" className="text-sm font-medium">Max active uploads</label>
+                  <label htmlFor="maxActiveUploads" className="text-sm font-medium">{t.maxActiveUploads}</label>
                   <Input
                     id="maxActiveUploads"
                     type="number"
                     inputMode="numeric"
                     value={form.maxActiveUploads}
                     onChange={(e) => update("maxActiveUploads", e.currentTarget.value)}
-                    placeholder="e.g. 2"
+                    placeholder={t.maxActiveUploadsPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxActiveTorrents" className="text-sm font-medium">Max active torrents</label>
+                  <label htmlFor="maxActiveTorrents" className="text-sm font-medium">{t.maxActiveTorrents}</label>
                   <Input
                     id="maxActiveTorrents"
                     type="number"
                     inputMode="numeric"
                     value={form.maxActiveTorrents}
                     onChange={(e) => update("maxActiveTorrents", e.currentTarget.value)}
-                    placeholder="e.g. 4"
+                    placeholder={t.maxActiveTorrentsPlaceholder}
                     disabled={loading}
                   />
                 </div>
@@ -701,65 +745,65 @@ function Settings() {
                     onChange={(e) => update("startPaused", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="startPaused" className="text-sm">Start torrents paused</label>
+                  <label htmlFor="startPaused" className="text-sm">{t.startPaused}</label>
                 </div>
               </div>
             </section>
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Connections and Slots</h2>
-                <p className="text-xs text-muted-foreground">Connection and upload slot limits</p>
+                <h2 className="text-sm font-semibold">{t.connectionsSlots}</h2>
+                <p className="text-xs text-muted-foreground">{t.connectionsSlotsDescription}</p>
               </div>
               <div className="p-4 grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <label htmlFor="maxConnections" className="text-sm font-medium">Max connections</label>
+                  <label htmlFor="maxConnections" className="text-sm font-medium">{t.maxConnections}</label>
                   <Input
                     id="maxConnections"
                     type="number"
                     inputMode="numeric"
                     value={form.maxConnections}
                     onChange={(e) => update("maxConnections", e.currentTarget.value)}
-                    placeholder="e.g. 500"
+                    placeholder={t.maxConnectionsPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxConnectionsPerTorrent" className="text-sm font-medium">Max connections per torrent</label>
+                  <label htmlFor="maxConnectionsPerTorrent" className="text-sm font-medium">{t.maxConnectionsPerTorrent}</label>
                   <Input
                     id="maxConnectionsPerTorrent"
                     type="number"
                     inputMode="numeric"
                     value={form.maxConnectionsPerTorrent}
                     onChange={(e) => update("maxConnectionsPerTorrent", e.currentTarget.value)}
-                    placeholder="e.g. 50"
+                    placeholder={t.maxConnectionsPerTorrentPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxUploads" className="text-sm font-medium">Max upload slots</label>
+                  <label htmlFor="maxUploads" className="text-sm font-medium">{t.maxUploadSlots}</label>
                   <Input
                     id="maxUploads"
                     type="number"
                     inputMode="numeric"
                     value={form.maxUploads}
                     onChange={(e) => update("maxUploads", e.currentTarget.value)}
-                    placeholder="e.g. 20"
+                    placeholder={t.maxUploadSlotsPlaceholder}
                     disabled={loading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxUploadsPerTorrent" className="text-sm font-medium">Max upload slots per torrent</label>
+                  <label htmlFor="maxUploadsPerTorrent" className="text-sm font-medium">{t.maxUploadSlotsPerTorrent}</label>
                   <Input
                     id="maxUploadsPerTorrent"
                     type="number"
                     inputMode="numeric"
                     value={form.maxUploadsPerTorrent}
                     onChange={(e) => update("maxUploadsPerTorrent", e.currentTarget.value)}
-                    placeholder="e.g. 10"
+                    placeholder={t.maxUploadSlotsPerTorrentPlaceholder}
                     disabled={loading}
                   />
                 </div>
@@ -768,8 +812,8 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">BitTorrent</h2>
-                <p className="text-xs text-muted-foreground">Protocol and privacy</p>
+                <h2 className="text-sm font-semibold">{t.bittorrent}</h2>
+                <p className="text-xs text-muted-foreground">{t.bittorrentDescription}</p>
               </div>
               <div className="p-4 grid gap-4 md:grid-cols-2">
                 <div className="flex items-center gap-2">
@@ -781,7 +825,7 @@ function Settings() {
                     onChange={(e) => update("dht", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="dht" className="text-sm">Enable DHT</label>
+                  <label htmlFor="dht" className="text-sm">{t.enableDht}</label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -793,7 +837,7 @@ function Settings() {
                     onChange={(e) => update("pex", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="pex" className="text-sm">Enable PeX</label>
+                  <label htmlFor="pex" className="text-sm">{t.enablePex}</label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -805,11 +849,11 @@ function Settings() {
                     onChange={(e) => update("lsd", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="lsd" className="text-sm">Enable Local Discovery (LSD)</label>
+                  <label htmlFor="lsd" className="text-sm">{t.enableLsd}</label>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="encryption" className="text-sm font-medium">Encryption mode</label>
+                  <label htmlFor="encryption" className="text-sm font-medium">{t.encryptionMode}</label>
                   <select
                     id="encryption"
                     className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
@@ -817,9 +861,9 @@ function Settings() {
                     onChange={(e) => update("encryption", e.currentTarget.value)}
                     disabled={loading}
                   >
-                    <option value="0">Prefer</option>
-                    <option value="1">Force</option>
-                    <option value="2">Disable</option>
+                    <option value="0">{t.prefer}</option>
+                    <option value="1">{t.force}</option>
+                    <option value="2">{t.disable}</option>
                   </select>
                 </div>
               </div>
@@ -827,8 +871,8 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Seeding</h2>
-                <p className="text-xs text-muted-foreground">Stop seeding after conditions are met</p>
+                <h2 className="text-sm font-semibold">{t.seeding}</h2>
+                <p className="text-xs text-muted-foreground">{t.seedingDescription}</p>
               </div>
               <div className="p-4 grid gap-4 md:grid-cols-2">
                 <div className="flex items-center gap-2">
@@ -840,24 +884,24 @@ function Settings() {
                     onChange={(e) => update("maxRatioEnabled", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="maxRatioEnabled" className="text-sm">Enable ratio limit</label>
+                  <label htmlFor="maxRatioEnabled" className="text-sm">{t.enableRatioLimit}</label>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxRatio" className="text-sm font-medium">Maximum ratio</label>
+                  <label htmlFor="maxRatio" className="text-sm font-medium">{t.maximumRatio}</label>
                   <Input
                     id="maxRatio"
                     type="number"
                     inputMode="decimal"
                     value={form.maxRatio}
                     onChange={(e) => update("maxRatio", e.currentTarget.value)}
-                    placeholder="e.g. 2.0"
+                    placeholder={t.maximumRatioPlaceholder}
                     disabled={loading || !form.maxRatioEnabled}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxRatioAct" className="text-sm font-medium">Action on ratio hit</label>
+                  <label htmlFor="maxRatioAct" className="text-sm font-medium">{t.actionOnRatioHit}</label>
                   <select
                     id="maxRatioAct"
                     className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
@@ -865,9 +909,9 @@ function Settings() {
                     onChange={(e) => update("maxRatioAct", e.currentTarget.value)}
                     disabled={loading || !form.maxRatioEnabled}
                   >
-                    <option value="0">Stop</option>
-                    <option value="1">Pause</option>
-                    <option value="2">Remove</option>
+                    <option value="0">{t.stop}</option>
+                    <option value="1">{t.pause}</option>
+                    <option value="2">{t.remove}</option>
                   </select>
                 </div>
 
@@ -880,18 +924,18 @@ function Settings() {
                     onChange={(e) => update("maxSeedingTimeEnabled", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="maxSeedingTimeEnabled" className="text-sm">Enable seeding time limit</label>
+                  <label htmlFor="maxSeedingTimeEnabled" className="text-sm">{t.enableSeedingTimeLimit}</label>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="maxSeedingTime" className="text-sm font-medium">Seeding time (minutes)</label>
+                  <label htmlFor="maxSeedingTime" className="text-sm font-medium">{t.seedingTime}</label>
                   <Input
                     id="maxSeedingTime"
                     type="number"
                     inputMode="numeric"
                     value={form.maxSeedingTime}
                     onChange={(e) => update("maxSeedingTime", e.currentTarget.value)}
-                    placeholder="e.g. 60"
+                    placeholder={t.seedingTimePlaceholder}
                     disabled={loading || !form.maxSeedingTimeEnabled}
                   />
                 </div>
@@ -900,8 +944,8 @@ function Settings() {
 
             <section className="rounded-lg border bg-card">
               <div className="border-b px-4 py-3">
-                <h2 className="text-sm font-semibold">Disk</h2>
-                <p className="text-xs text-muted-foreground">Write behavior for downloaded files</p>
+                <h2 className="text-sm font-semibold">{t.disk}</h2>
+                <p className="text-xs text-muted-foreground">{t.diskDescription}</p>
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-2">
@@ -913,7 +957,7 @@ function Settings() {
                     onChange={(e) => update("preallocateAll", e.currentTarget.checked)}
                     disabled={loading}
                   />
-                  <label htmlFor="preallocateAll" className="text-sm">Pre-allocate disk space for all files</label>
+                  <label htmlFor="preallocateAll" className="text-sm">{t.preallocateAll}</label>
                 </div>
               </div>
             </section>

@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Torrent } from "./types";
 import { formatSpeed } from "./utils";
+import { useI18n } from "@/lib/language";
 
 interface TorrentContextMenuProps {
   torrent: Torrent;
@@ -46,7 +47,7 @@ interface TorrentContextMenuProps {
 }
 
 const SPEED_PRESETS = [
-  { label: "Unlimited", value: 0 },
+  { labelKey: "unlimited", value: 0 },
   { label: "100 KB/s", value: 100 * 1024 },
   { label: "500 KB/s", value: 500 * 1024 },
   { label: "1 MB/s", value: 1024 * 1024 },
@@ -61,6 +62,7 @@ interface SpeedSubmenuProps {
 }
 
 function SpeedSubmenu({ current, onApply, onCustom }: SpeedSubmenuProps) {
+  const t = useI18n();
   const hasCustom = current > 0 && !isPreset(current);
   return (
     <ContextMenuSubContent className="w-48">
@@ -69,7 +71,7 @@ function SpeedSubmenu({ current, onApply, onCustom }: SpeedSubmenuProps) {
           <span className="w-4 shrink-0 flex items-center">
             {current === p.value && <CheckIcon className="size-3.5" />}
           </span>
-          {p.label}
+          {"labelKey" in p ? t.unlimited : p.label}
         </ContextMenuItem>
       ))}
       {hasCustom && (
@@ -86,7 +88,7 @@ function SpeedSubmenu({ current, onApply, onCustom }: SpeedSubmenuProps) {
       <ContextMenuSeparator />
       <ContextMenuItem onClick={onCustom}>
         <span className="w-4 shrink-0" />
-        Custom…
+        {t.custom}
       </ContextMenuItem>
     </ContextMenuSubContent>
   );
@@ -107,6 +109,7 @@ export function TorrentContextMenu({
   globalUpLimit = 0,
   onRefreshGlobalLimits,
 }: TorrentContextMenuProps) {
+  const t = useI18n();
   const [speedDialog, setSpeedDialog] = useState<SpeedType | null>(null);
   const [customSpeed, setCustomSpeed] = useState("");
 
@@ -152,10 +155,10 @@ export function TorrentContextMenu({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast.success("Downloading torrent file");
+      toast.success(t.downloadingTorrentFile);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to download torrent file");
+      toast.error(t.downloadTorrentFailed);
     }
   }
   async function applySpeedLimit(type: SpeedType, bytes: number) {
@@ -170,7 +173,7 @@ export function TorrentContextMenu({
       const globalLimit = type === "download" ? globalDlLimit : globalUpLimit;
       if (globalLimit > 0 && bytes > globalLimit) {
         toast.warning(
-          `${type === "download" ? "Download" : "Upload"} limit (${formatSpeed(bytes)}) exceeds the global limit (${formatSpeed(globalLimit)}). The global limit will take precedence.`,
+          t.limitWarning(type === "download" ? t.download : t.upload, formatSpeed(bytes), formatSpeed(globalLimit)),
           { duration: 6000 }
         );
       }
@@ -196,19 +199,19 @@ export function TorrentContextMenu({
         <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
         <ContextMenuContent className="w-52">
           <ContextMenuLabel className="truncate max-w-[180px]">
-            {torrent.name ?? "Torrent"}
+            {torrent.name ?? t.torrentFallback}
           </ContextMenuLabel>
           <ContextMenuSeparator />
 
           {isPaused ? (
             <ContextMenuItem onClick={handleResume}>
               <CirclePlayIcon className="size-4 text-green-500" />
-              Resume
+              {t.toolbarResume}
             </ContextMenuItem>
           ) : (
             <ContextMenuItem onClick={handlePause}>
               <CirclePauseIcon className="size-4 text-yellow-500" />
-              Pause
+              {t.toolbarPause}
             </ContextMenuItem>
           )}
 
@@ -217,7 +220,7 @@ export function TorrentContextMenu({
           <ContextMenuSub>
             <ContextMenuSubTrigger>
               <ArrowDownIcon className="size-4 text-blue-500" />
-              Download Limit
+              {t.downloadLimit}
             </ContextMenuSubTrigger>
             <SpeedSubmenu
               current={dlLimit}
@@ -229,7 +232,7 @@ export function TorrentContextMenu({
           <ContextMenuSub>
             <ContextMenuSubTrigger>
               <ArrowUpIcon className="size-4 text-green-500" />
-              Upload Limit
+              {t.uploadLimit}
             </ContextMenuSubTrigger>
             <SpeedSubmenu
               current={upLimit}
@@ -242,15 +245,15 @@ export function TorrentContextMenu({
 
           <ContextMenuItem onClick={handleRecheck}>
             <RefreshCwIcon className="size-4" />
-            Force Recheck
+            {t.forceRecheck}
           </ContextMenuItem>
           <ContextMenuItem onClick={handleReannounce}>
             <RadioIcon className="size-4" />
-            Force Reannounce
+            {t.forceReannounce}
           </ContextMenuItem>
           <ContextMenuItem onClick={handleDownloadTorrent}>
             <DownloadIcon className="size-4" />
-            Download .torrent
+            {t.downloadTorrent}
           </ContextMenuItem>
 
           <ContextMenuSeparator />
@@ -260,7 +263,7 @@ export function TorrentContextMenu({
             onClick={() => onDelete(torrent)}
           >
             <Trash2Icon className="size-4" />
-            Delete…
+            {t.toolbarDelete}...
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -272,7 +275,7 @@ export function TorrentContextMenu({
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
             <DialogTitle>
-              {speedDialog === "download" ? "Download" : "Upload"} Speed Limit
+              {speedDialog === "download" ? t.download : t.upload} {t.speedLimit}
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center gap-2 py-2">
@@ -280,7 +283,7 @@ export function TorrentContextMenu({
               autoFocus
               type="number"
               min="0"
-              placeholder="e.g. 512"
+              placeholder={t.speedPlaceholder}
               value={customSpeed}
               onChange={(e) => setCustomSpeed(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submitCustomSpeed()}
@@ -291,9 +294,9 @@ export function TorrentContextMenu({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSpeedDialog(null)}>
-              Cancel
+              {t.cancel}
             </Button>
-            <Button onClick={submitCustomSpeed}>Apply</Button>
+            <Button onClick={submitCustomSpeed}>{t.apply}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

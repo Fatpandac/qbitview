@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { getCloseAction, setCloseAction, type CloseAction } from "@/lib/close-action";
+import { useI18n } from "@/lib/language";
 
 type RememberableAction = Exclude<CloseAction, "ask">;
 
@@ -19,6 +20,7 @@ function performAction(action: RememberableAction) {
 }
 
 export function ExitDialog() {
+  const t = useI18n();
   const [open, setOpen] = useState(false);
   const [remember, setRemember] = useState(false);
 
@@ -54,9 +56,9 @@ export function ExitDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Close qbitview</DialogTitle>
+          <DialogTitle>{t.closeQbitview}</DialogTitle>
           <DialogDescription>
-            Quit the app or keep it running in the background?
+            {t.closeQbitviewDescription}
           </DialogDescription>
         </DialogHeader>
         <label className="flex items-center gap-2 text-sm">
@@ -66,13 +68,13 @@ export function ExitDialog() {
             checked={remember}
             onChange={(e) => setRemember(e.currentTarget.checked)}
           />
-          Remember my choice
+          {t.rememberCloseChoice}
         </label>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleChoice("minimize")}>
-            Run in background
+            {t.minimizeToTray}
           </Button>
-          <Button onClick={() => handleChoice("exit")}>Quit application</Button>
+          <Button onClick={() => handleChoice("exit")}>{t.quitApplication}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router";
 import router from "./router";
 import { initTheme } from "./lib/theme";
+import { initLanguage } from "./lib/language";
 import { ExitDialog } from "./components/ExitDialog";
 
 if (import.meta.env.DEV) {
@@ -12,6 +13,7 @@ if (import.meta.env.DEV) {
 }
 
 initTheme();
+initLanguage();
 
 window.addEventListener("keydown", (event) => {
   if (event.metaKey && (event.key === "," || event.code === "Comma")) {

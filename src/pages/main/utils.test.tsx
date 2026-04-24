@@ -4,14 +4,14 @@ import { countByCategory, filterTorrentsByCategory, normalizeCategoryLabel } fro
 import { Torrent } from "./types";
 
 describe("category utils", () => {
-  it("normalizes empty categories to 未分类", () => {
-    expect(normalizeCategoryLabel("")).toBe("未分类");
-    expect(normalizeCategoryLabel("   ")).toBe("未分类");
-    expect(normalizeCategoryLabel(undefined)).toBe("未分类");
+  it("normalizes empty categories to the current language label", () => {
+    expect(normalizeCategoryLabel("")).toBe("Uncategorized");
+    expect(normalizeCategoryLabel("   ")).toBe("Uncategorized");
+    expect(normalizeCategoryLabel(undefined)).toBe("Uncategorized");
     expect(normalizeCategoryLabel("Movies")).toBe("Movies");
   });
 
-  it("counts torrents by category and includes 未分类", () => {
+  it("counts torrents by category and includes the fallback category", () => {
     const torrents: Torrent[] = [
       { hash: "1", category: "Movies" },
       { hash: "2", category: "TV" },
@@ -23,7 +23,7 @@ describe("category utils", () => {
     expect(countByCategory(torrents)).toEqual([
       { label: "Movies", count: 2 },
       { label: "TV", count: 1 },
-      { label: "未分类", count: 2 },
+      { label: "Uncategorized", count: 2 },
     ]);
   });
 
@@ -36,6 +36,6 @@ describe("category utils", () => {
 
     expect(filterTorrentsByCategory(torrents, null)).toHaveLength(3);
     expect(filterTorrentsByCategory(torrents, "Movies")).toEqual([{ hash: "1", category: "Movies" }]);
-    expect(filterTorrentsByCategory(torrents, "未分类")).toEqual([{ hash: "2", category: "" }]);
+    expect(filterTorrentsByCategory(torrents, "Uncategorized")).toEqual([{ hash: "2", category: "" }]);
   });
 });

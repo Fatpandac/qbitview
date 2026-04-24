@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import useMainStore from "@/sotres/main";
 import { FILTERS } from "@/pages/main/utils";
-import { buildCommandPaletteItems, getCommandHref, SETTINGS_COMMANDS } from "./command-palette.utils";
+import { buildCommandPaletteItems, getCommandHref, getSettingsCommands } from "./command-palette.utils";
 import { cn } from "@/lib/utils";
 import type { CommandPaletteItem } from "./command-palette.types";
 import { useLocation, useNavigate } from "react-router";
+import { useI18n } from "@/lib/language";
 
 function getIcon(item: CommandPaletteItem) {
   switch (item.type) {
@@ -30,6 +31,7 @@ function isMoveUpKey(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | 
 }
 
 export function CommandPalette() {
+  const t = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const { torrents } = useMainStore();
@@ -48,8 +50,8 @@ export function CommandPalette() {
       buildCommandPaletteItems(
         {
           torrents,
-          filters: FILTERS.map(({ key, label }) => ({ key, label })),
-          settings: SETTINGS_COMMANDS,
+          filters: FILTERS.map(({ key }) => ({ key, label: t.filters[key] })),
+          settings: getSettingsCommands(),
           currentPath: location.pathname,
         },
         query,
@@ -139,9 +141,9 @@ export function CommandPalette() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-2xl h-[480px] flex flex-col p-0 gap-0 overflow-hidden [&_[data-slot='dialog-close']]:top-3 [&_[data-slot='dialog-close']]:right-4 [&_[data-slot='dialog-close']]:-translate-y-0 [&_[data-slot='dialog-close']]:mt-0">
-        <DialogTitle className="sr-only">Command palette</DialogTitle>
+        <DialogTitle className="sr-only">{t.commandPalette}</DialogTitle>
         <DialogDescription className="sr-only">
-          Search torrents, categories, and settings, then press Enter to navigate.
+          {t.commandPaletteDescription}
         </DialogDescription>
         <div className="flex items-center gap-3 border-b px-4 py-3 pr-14">
           <SearchIcon className="size-4 text-muted-foreground" />
@@ -172,10 +174,10 @@ export function CommandPalette() {
                 moveActiveIndex(Math.max(activeIndex - 1, 0));
               }
             }}
-            placeholder="Search torrents, categories, and settings..."
+            placeholder={t.commandPalettePlaceholder}
             className="border-0 shadow-none focus-visible:ring-0 px-0"
           />
-          <span className="hidden sm:inline text-[11px] text-muted-foreground whitespace-nowrap">Enter to open</span>
+          <span className="hidden sm:inline text-[11px] text-muted-foreground whitespace-nowrap">{t.enterToOpen}</span>
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div
@@ -188,7 +190,7 @@ export function CommandPalette() {
           >
             {items.length === 0 ? (
               <div className="px-3 py-8 text-sm text-center text-muted-foreground">
-                No matching commands
+                {t.noMatchingCommands}
               </div>
             ) : (
               items.map((item, index) => (

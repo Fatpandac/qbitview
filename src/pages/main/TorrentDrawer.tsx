@@ -7,15 +7,16 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Torrent, TorrentContent, TorrentPeer, TorrentProperty, TorrentTracker } from "./types";
 import { formatBytes, formatEta, formatSpeed } from "./utils";
 import { PiecesCanvas } from "./PiecesCanvas";
+import { useI18n } from "@/lib/language";
 
 type Tab = "info" | "trackers" | "peers" | "webseeds" | "content";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "info",     label: "Info" },
-  { id: "trackers", label: "Trackers" },
-  { id: "peers",    label: "Peers" },
-  { id: "webseeds", label: "HTTP Sources" },
-  { id: "content",  label: "Content" },
+const TABS: { id: Tab }[] = [
+  { id: "info" },
+  { id: "trackers" },
+  { id: "peers" },
+  { id: "webseeds" },
+  { id: "content" },
 ];
 
 interface TorrentDrawerProps {
@@ -168,49 +169,50 @@ function InfoItem({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-function Empty({ msg = "No data" }: { msg?: string }) {
+function Empty({ msg }: { msg: string }) {
   return <p className="text-sm text-muted-foreground text-center py-10">{msg}</p>;
 }
 
 /* ── tab panels ── */
 function InfoPanel({ property, pieces }: { property: TorrentProperty; pieces: number[] }) {
+  const t = useI18n();
   const downloaded = pieces.filter((p) => p === 2).length;
   const downloading = pieces.filter((p) => p === 1).length;
   const pct = pieces.length > 0 ? ((downloaded / pieces.length) * 100).toFixed(1) : "0";
   return (
     <div className="space-y-5">
-      {property.save_path && <InfoItem label="Save Path" value={property.save_path} />}
+      {property.save_path && <InfoItem label={t.savePathInfo} value={property.save_path} />}
       {property.comment && property.comment !== "None" && (
-        <InfoItem label="Comment" value={property.comment} />
+        <InfoItem label={t.comment} value={property.comment} />
       )}
       <div className="h-px bg-border" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <InfoItem label="Total Size"  value={formatBytes(property.total_size ?? undefined)} />
-        <InfoItem label="Piece Size"  value={formatBytes(property.piece_size ?? undefined)} />
-        <InfoItem label="Pieces"      value={`${property.pieces_have ?? 0} / ${property.pieces_num ?? 0}`} />
-        <InfoItem label="Share Ratio" value={property.share_ratio?.toFixed(3) ?? "—"} />
-        <InfoItem label="Seeds"       value={`${property.seeds ?? 0} / ${property.seeds_total ?? 0}`} />
-        <InfoItem label="Peers"       value={`${property.peers ?? 0} / ${property.peers_total ?? 0}`} />
-        <InfoItem label="Connections" value={`${property.nb_connections ?? 0} / ${property.nb_connections_limit ?? 0}`} />
-        <InfoItem label="ETA"         value={formatEta(property.eta ?? undefined)} />
+        <InfoItem label={t.totalSize} value={formatBytes(property.total_size ?? undefined)} />
+        <InfoItem label={t.pieceSize} value={formatBytes(property.piece_size ?? undefined)} />
+        <InfoItem label={t.pieces} value={`${property.pieces_have ?? 0} / ${property.pieces_num ?? 0}`} />
+        <InfoItem label={t.shareRatio} value={property.share_ratio?.toFixed(3) ?? "—"} />
+        <InfoItem label={t.tableSeeds} value={`${property.seeds ?? 0} / ${property.seeds_total ?? 0}`} />
+        <InfoItem label={t.tablePeers} value={`${property.peers ?? 0} / ${property.peers_total ?? 0}`} />
+        <InfoItem label={t.connections} value={`${property.nb_connections ?? 0} / ${property.nb_connections_limit ?? 0}`} />
+        <InfoItem label={t.tableEta} value={formatEta(property.eta ?? undefined)} />
       </div>
       <div className="h-px bg-border" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <InfoItem label="Downloaded"   value={formatBytes(property.total_downloaded ?? undefined)} />
-        <InfoItem label="Uploaded"     value={formatBytes(property.total_uploaded ?? undefined)} />
-        <InfoItem label="↓ Speed"      value={formatSpeed(property.dl_speed ?? undefined)} />
-        <InfoItem label="↑ Speed"      value={formatSpeed(property.up_speed ?? undefined)} />
-        <InfoItem label="Avg ↓"        value={formatSpeed(property.dl_speed_avg ?? undefined)} />
-        <InfoItem label="Avg ↑"        value={formatSpeed(property.up_speed_avg ?? undefined)} />
-        <InfoItem label="Active Time"  value={formatTime(property.time_elapsed)} />
-        <InfoItem label="Seeding Time" value={formatTime(property.seeding_time)} />
+        <InfoItem label={t.downloaded} value={formatBytes(property.total_downloaded ?? undefined)} />
+        <InfoItem label={t.uploaded} value={formatBytes(property.total_uploaded ?? undefined)} />
+        <InfoItem label={`↓ ${t.tableSpeed}`} value={formatSpeed(property.dl_speed ?? undefined)} />
+        <InfoItem label={`↑ ${t.tableSpeed}`} value={formatSpeed(property.up_speed ?? undefined)} />
+        <InfoItem label={t.avgDown} value={formatSpeed(property.dl_speed_avg ?? undefined)} />
+        <InfoItem label={t.avgUp} value={formatSpeed(property.up_speed_avg ?? undefined)} />
+        <InfoItem label={t.activeTime} value={formatTime(property.time_elapsed)} />
+        <InfoItem label={t.seedingTimeInfo} value={formatTime(property.seeding_time)} />
       </div>
       <div className="h-px bg-border" />
       <div className="space-y-3">
-        {property.created_by && <InfoItem label="Created By" value={property.created_by} />}
-        <InfoItem label="Added"     value={formatDate(property.addition_date)} />
+        {property.created_by && <InfoItem label={t.createdBy} value={property.created_by} />}
+        <InfoItem label={t.added} value={formatDate(property.addition_date)} />
         {(property.completion_date ?? 0) > 0 && (
-          <InfoItem label="Completed" value={formatDate(property.completion_date)} />
+          <InfoItem label={t.stateCompleted} value={formatDate(property.completion_date)} />
         )}
       </div>
       {pieces.length > 0 && (
@@ -218,13 +220,13 @@ function InfoPanel({ property, pieces }: { property: TorrentProperty; pieces: nu
           <div className="h-px bg-border" />
           <div>
             <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-semibold">Pieces</p>
+              <p className="text-xs font-semibold">{t.pieces}</p>
               <p className="text-xs text-muted-foreground">
                 {downloaded.toLocaleString()} / {pieces.length.toLocaleString()} ({pct}%)
               </p>
             </div>
             <div className="flex items-center gap-3 mb-3">
-              {[["bg-blue-500","Downloaded"],["bg-amber-400","Downloading"],["bg-[#374151]","Missing"]].map(([c,l]) => (
+              {[["bg-blue-500", t.piecesDownloaded], ["bg-amber-400", t.piecesDownloading], ["bg-[#374151]", t.piecesMissing]].map(([c,l]) => (
                 <div key={l} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <div className={cn("size-2.5 rounded-sm", c)} />
                   {l}
@@ -234,7 +236,7 @@ function InfoPanel({ property, pieces }: { property: TorrentProperty; pieces: nu
             <PiecesCanvas pieces={pieces} />
             {downloading > 0 && (
               <p className="text-xs text-amber-500 mt-2">
-                {downloading.toLocaleString()} piece{downloading > 1 ? "s" : ""} downloading
+                {t.pieceDownloadingCount(downloading)}
               </p>
             )}
           </div>
@@ -245,20 +247,21 @@ function InfoPanel({ property, pieces }: { property: TorrentProperty; pieces: nu
 }
 
 function TrackersPanel({ trackers }: { trackers: TorrentTracker[] }) {
-  if (!trackers.length) return <Empty msg="No trackers" />;
+  const labels = useI18n();
+  if (!trackers.length) return <Empty msg={labels.noTrackers} />;
   return (
     <div className="space-y-2">
-      {trackers.map((t, i) => (
+      {trackers.map((tracker, i) => (
         <div key={i} className="rounded-md border p-3 space-y-1.5 text-xs">
-          <p className="font-medium text-sm break-all">{t.url || "(DHT / PeX)"}</p>
+          <p className="font-medium text-sm break-all">{tracker.url || "(DHT / PeX)"}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
-            <span>Status: <span className="text-foreground">{t.status}</span></span>
-            {t.tier >= 0 && <span>Tier: {t.tier}</span>}
-            <span>Peers: {t.num_peers}</span>
-            <span>Seeds: {t.num_seeds}</span>
-            <span>Downloaded: {t.num_downloaded}</span>
+            <span>{labels.status}: <span className="text-foreground">{tracker.status}</span></span>
+            {tracker.tier >= 0 && <span>{labels.tier}: {tracker.tier}</span>}
+            <span>{labels.tablePeers}: {tracker.num_peers}</span>
+            <span>{labels.tableSeeds}: {tracker.num_seeds}</span>
+            <span>{labels.downloaded}: {tracker.num_downloaded}</span>
           </div>
-          {t.msg && <p className="text-amber-500">{t.msg}</p>}
+          {tracker.msg && <p className="text-amber-500">{tracker.msg}</p>}
         </div>
       ))}
     </div>
@@ -266,17 +269,18 @@ function TrackersPanel({ trackers }: { trackers: TorrentTracker[] }) {
 }
 
 function PeersPanel({ peers }: { peers: TorrentPeer[] }) {
-  if (!peers.length) return <Empty msg="No connected peers" />;
+  const t = useI18n();
+  if (!peers.length) return <Empty msg={t.noConnectedPeers} />;
   return (
     <ScrollArea className="w-full">
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="text-muted-foreground border-b">
             <th className="text-left py-1.5 pr-2 font-medium">IP</th>
-            <th className="text-left py-1.5 pr-2 font-medium">Client</th>
+            <th className="text-left py-1.5 pr-2 font-medium">{t.client}</th>
             <th className="text-right py-1.5 pr-2 font-medium">↓</th>
             <th className="text-right py-1.5 font-medium">↑</th>
-            <th className="text-right py-1.5 pl-2 font-medium">Progress</th>
+            <th className="text-right py-1.5 pl-2 font-medium">{t.tableProgress}</th>
           </tr>
         </thead>
         <tbody>
@@ -297,7 +301,8 @@ function PeersPanel({ peers }: { peers: TorrentPeer[] }) {
 }
 
 function WebSeedsPanel({ seeds }: { seeds: string[] }) {
-  if (!seeds.length) return <Empty msg="No HTTP sources" />;
+  const t = useI18n();
+  if (!seeds.length) return <Empty msg={t.noHttpSources} />;
   return (
     <div className="space-y-1.5">
       {seeds.map((url, i) => (
@@ -310,7 +315,8 @@ function WebSeedsPanel({ seeds }: { seeds: string[] }) {
 }
 
 function ContentPanel({ contents }: { contents: TorrentContent[] }) {
-  if (!contents.length) return <Empty msg="No files" />;
+  const t = useI18n();
+  if (!contents.length) return <Empty msg={t.noFiles} />;
   type TreeNode = {
     name: string;
     children: Map<string, TreeNode>;
@@ -374,7 +380,7 @@ function ContentPanel({ contents }: { contents: TorrentContent[] }) {
                 type="button"
                 onClick={() => toggle(child.path)}
                 className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={isOpen ? "Collapse folder" : "Expand folder"}
+                aria-label={isOpen ? t.collapseFolder : t.expandFolder}
               >
                 {isOpen ? <ChevronDownIcon className="size-3" /> : <ChevronRightIcon className="size-3" />}
               </button>
@@ -422,6 +428,7 @@ const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 320;
 
 export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
+  const t = useI18n();
   const [tab, setTab] = useState<Tab>("info");
   const [property, setProperty] = useState<TorrentProperty | null>(null);
   const [pieces, setPieces] = useState<number[]>([]);
@@ -592,12 +599,12 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
                 if (!text) return;
                 try {
                   await navigator.clipboard.writeText(text);
-                  toast.success("Copied name and hash");
+                  toast.success(t.copiedNameHash);
                 } catch {}
               }}
               className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Copy name and hash"
-              title="Copy name and hash"
+              aria-label={t.copyNameHash}
+              title={t.copyNameHash}
             >
               <CopyIcon className="size-3.5" />
             </button>
@@ -611,7 +618,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       {/* Tab bar */}
       <ScrollArea className="shrink-0 border-b">
         <div className="flex">
-          {TABS.map(({ id, label }) => (
+          {TABS.map(({ id }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
@@ -622,7 +629,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              {label}
+              {t.drawerTabs[id]}
             </button>
           ))}
         </div>
@@ -633,7 +640,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       <ScrollArea ref={contentScrollRef} className="flex-1 min-h-0">
         <div className="p-4">
           {loading ? (
-            <p className="text-sm text-muted-foreground text-center py-10">Loading…</p>
+            <p className="text-sm text-muted-foreground text-center py-10">{t.loading}</p>
           ) : tab === "info" && property ? (
             <InfoPanel property={property} pieces={pieces} />
           ) : tab === "trackers" ? (
@@ -645,7 +652,7 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
           ) : tab === "content" ? (
             <ContentPanel contents={contents} />
           ) : (
-            <Empty />
+            <Empty msg={t.noData} />
           )}
         </div>
       </ScrollArea>
