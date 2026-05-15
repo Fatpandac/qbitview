@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CircleXIcon, LinkIcon, UploadIcon } from "lucide-react";
@@ -27,7 +27,7 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
 
   useEffect(() => {
     let active = true;
-    invoke<{ save_path?: string }>("get_preferences")
+    invokeHost<{ save_path?: string }>("get_preferences")
       .then((prefs) => {
         if (!active) return;
         setDefaultSavePath(prefs.save_path ?? "");
@@ -62,7 +62,7 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
           setError(t.enterUrlError);
           return;
         }
-        await invoke("add_torrent_urls", { urls, savepath: savepathArg, category: categoryArg, paused: pausedArg });
+        await invokeHost("add_torrent_urls", { urls, savepath: savepathArg, category: categoryArg, paused: pausedArg });
       } else {
         if (!file) {
           setError(t.selectFileError);
@@ -70,7 +70,7 @@ export function AddTorrentModal({ onClose, onSuccess, initialFile }: AddTorrentM
         }
         const buffer = await file.arrayBuffer();
         const data = Array.from(new Uint8Array(buffer));
-        await invoke("add_torrent_file", { filename: file.name, data, savepath: savepathArg, category: categoryArg, paused: pausedArg });
+        await invokeHost("add_torrent_file", { filename: file.name, data, savepath: savepathArg, category: categoryArg, paused: pausedArg });
       }
 
       onSuccess();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "./ui/button";
 import {
@@ -16,7 +16,7 @@ import { useI18n } from "@/lib/language";
 type RememberableAction = Exclude<CloseAction, "ask">;
 
 function performAction(action: RememberableAction) {
-  invoke(action === "exit" ? "exit_app" : "hide_main_window").catch(console.error);
+  invokeHost(action === "exit" ? "exit_app" : "hide_main_window").catch(console.error);
 }
 
 export function ExitDialog() {

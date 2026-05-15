@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Navigate } from "react-router";
@@ -25,7 +25,7 @@ function App() {
 
   useEffect(() => {
     if (DEV_AUTO_LOGIN && !authorized) {
-      invoke("login", {
+      invokeHost("login", {
         username: DEV_USERNAME,
         password: DEV_PASSWORD,
         domain: DEV_DOMAIN,
@@ -45,7 +45,7 @@ function App() {
   async function login() {
     try {
       const { username, password, domain } = loginInfo;
-      await invoke("login", { username, password, domain });
+      await invokeHost("login", { username, password, domain });
       setAuthorized(true);
       router.navigate("/main");
     } catch (e) {

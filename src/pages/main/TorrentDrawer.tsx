@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { ChevronDownIcon, ChevronRightIcon, CopyIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -504,27 +504,27 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
 
     Promise.all([
       raceDrawerRequestWithAbort(
-        invoke<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }).catch(() => null),
+        invokeHost<TorrentProperty>("get_torrent_properties", { hash: torrent.hash }).catch(() => null),
         controller.signal,
       ),
       raceDrawerRequestWithAbort(
-        invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash }).catch(() => []),
+        invokeHost<number[]>("get_torrent_pieces_states", { hash: torrent.hash }).catch(() => []),
         controller.signal,
       ),
       raceDrawerRequestWithAbort(
-        invoke<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }).catch(() => []),
+        invokeHost<TorrentTracker[]>("get_torrent_trackers", { hash: torrent.hash }).catch(() => []),
         controller.signal,
       ),
       raceDrawerRequestWithAbort(
-        invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }).catch(() => []),
+        invokeHost<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash }).catch(() => []),
         controller.signal,
       ),
       raceDrawerRequestWithAbort(
-        invoke<string[]>("get_torrent_web_seeds", { hash: torrent.hash }).catch(() => []),
+        invokeHost<string[]>("get_torrent_web_seeds", { hash: torrent.hash }).catch(() => []),
         controller.signal,
       ),
       raceDrawerRequestWithAbort(
-        invoke<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }).catch(() => []),
+        invokeHost<TorrentContent[]>("get_torrent_contents", { hash: torrent.hash }).catch(() => []),
         controller.signal,
       ),
     ])
@@ -549,11 +549,11 @@ export function TorrentDrawer({ torrent, onClose }: TorrentDrawerProps) {
       try {
         const [pcs, prs] = await Promise.all([
           raceDrawerRequestWithAbort(
-            invoke<number[]>("get_torrent_pieces_states", { hash: torrent.hash! }).catch(() => null),
+            invokeHost<number[]>("get_torrent_pieces_states", { hash: torrent.hash! }).catch(() => null),
             controller.signal,
           ),
           raceDrawerRequestWithAbort(
-            invoke<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! }).catch(() => null),
+            invokeHost<TorrentPeer[]>("get_torrent_peers", { hash: torrent.hash! }).catch(() => null),
             controller.signal,
           ),
         ]);

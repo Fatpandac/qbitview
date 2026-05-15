@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
@@ -69,7 +69,7 @@ function Main() {
         const torrentPath = paths.find((p) => p.endsWith(".torrent"));
         if (torrentPath) {
           try {
-            const bytes = await invoke<number[]>("read_file", { path: torrentPath });
+            const bytes = await invokeHost<number[]>("read_file", { path: torrentPath });
             const filename = torrentPath.split("/").pop() ?? torrentPath.split("\\").pop() ?? "file.torrent";
             const file = new File([new Uint8Array(bytes)], filename, { type: "application/x-bittorrent" });
             setDropFile(file);
@@ -88,7 +88,7 @@ function Main() {
 
   async function fetchGlobalLimits() {
     try {
-      const gl = await invoke<{ dl_limit: number; up_limit: number }>("get_global_speed_limits");
+      const gl = await invokeHost<{ dl_limit: number; up_limit: number }>("get_global_speed_limits");
       setGlobalDlLimit(gl.dl_limit > 0 ? gl.dl_limit : 0);
       setGlobalUpLimit(gl.up_limit > 0 ? gl.up_limit : 0);
     } catch (e) {
@@ -99,12 +99,12 @@ function Main() {
   async function fetchData() {
     try {
       const [ts, ti] = await Promise.all([
-        invoke<Torrent[]>("get_torrents", { filter: null }),
-        invoke<TransferInfo>("get_transfer_info"),
+        invokeHost<Torrent[]>("get_torrents", { filter: null }),
+        invokeHost<TransferInfo>("get_transfer_info"),
       ]);
       setTorrents(ts);
       setTransferInfo(ti);
-      invoke("update_transfer_monitor_title", {
+      invokeHost("update_transfer_monitor_title", {
         downloadSpeed: ti.dl_info_speed,
         uploadSpeed: ti.up_info_speed,
       }).catch(console.error);
@@ -119,7 +119,7 @@ function Main() {
   }
 
   useEffect(() => {
-    invoke<string>("get_version").then(setVersion).catch(console.error);
+    invokeHost<string>("get_version").then(setVersion).catch(console.error);
     fetchGlobalLimits();
   }, []);
 
@@ -202,19 +202,19 @@ function Main() {
 
   async function handleStop() {
     if (!selectedHashes.length) return;
-    await invoke("stop_torrents", { hashes: selectedHashes });
+    await invokeHost("stop_torrents", { hashes: selectedHashes });
     fetchData();
   }
 
   async function handleStart() {
     if (!selectedHashes.length) return;
-    await invoke("start_torrents", { hashes: selectedHashes });
+    await invokeHost("start_torrents", { hashes: selectedHashes });
     fetchData();
   }
 
   async function handleDelete(withFiles: boolean) {
     if (!selectedHashes.length) return;
-    await invoke("delete_torrents", { hashes: selectedHashes, deleteFiles: withFiles });
+    await invokeHost("delete_torrents", { hashes: selectedHashes, deleteFiles: withFiles });
     setSelected(new Set());
     setShowDeleteModal(false);
     fetchData();

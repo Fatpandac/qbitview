@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { ArrowLeftIcon, SaveIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -231,7 +231,7 @@ function Settings() {
     let active = true;
     setLoading(true);
     setMessage(null);
-    invoke<PreferencesPayload>("get_preferences")
+    invokeHost<PreferencesPayload>("get_preferences")
       .then((prefs) => {
         if (!active) return;
         const next = mapPreferencesToForm(prefs, getThemeMode(), getLanguage(), getCloseAction());
@@ -292,7 +292,7 @@ function Settings() {
     try {
       if (isPreferencesDirty) {
         const payload = buildPreferencesPayload(form);
-        await invoke("set_preferences", { preferences: payload });
+        await invokeHost("set_preferences", { preferences: payload });
       }
       setThemeMode(form.theme);
       setLanguage(form.language);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeHost } from "@/native/host-client";
 import { toast } from "sonner";
 import {
   CirclePauseIcon,
@@ -123,19 +123,19 @@ export function TorrentContextMenu({
   const upLimit = (torrent.up_limit ?? 0) <= 0 ? 0 : torrent.up_limit ?? 0;
 
   async function handlePause() {
-    await invoke("stop_torrents", { hashes: [hash] }).catch(console.error);
+    await invokeHost("stop_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
   async function handleResume() {
-    await invoke("start_torrents", { hashes: [hash] }).catch(console.error);
+    await invokeHost("start_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
   async function handleRecheck() {
-    await invoke("recheck_torrents", { hashes: [hash] }).catch(console.error);
+    await invokeHost("recheck_torrents", { hashes: [hash] }).catch(console.error);
     onAction();
   }
   async function handleReannounce() {
-    await invoke("reannounce_torrents", { hashes: [hash] }).catch(
+    await invokeHost("reannounce_torrents", { hashes: [hash] }).catch(
       console.error,
     );
     onAction();
@@ -143,7 +143,7 @@ export function TorrentContextMenu({
   async function handleDownloadTorrent() {
     if (!hash) return;
     try {
-      const bytes = await invoke<number[]>("export_torrent", { hash });
+      const bytes = await invokeHost<number[]>("export_torrent", { hash });
       const base = (torrent.name ?? hash).trim() || hash || "torrent";
       const safe = base.replace(/[\\/:*?"<>|]/g, "_");
       const filename = safe.endsWith(".torrent") ? safe : `${safe}.torrent`;
@@ -166,7 +166,7 @@ export function TorrentContextMenu({
       type === "download"
         ? "set_torrent_download_limit"
         : "set_torrent_upload_limit";
-    await invoke(cmd, { hashes: [hash], limit: bytes }).catch(console.error);
+    await invokeHost(cmd, { hashes: [hash], limit: bytes }).catch(console.error);
     onRefreshGlobalLimits?.();
     // Warn if the per-torrent limit exceeds the global limit
     if (bytes > 0) {
