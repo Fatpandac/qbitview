@@ -172,10 +172,11 @@ function Main() {
   }, [location.search, torrents, dismissedTorrentHash]);
 
   const counts = useMemo(() => countByFilter(torrents), [torrents]);
-  const categoryCounts = useMemo(() => countByCategory(torrents), [torrents]);
+  const filteredByStatus = useMemo(() => filterTorrents(torrents, filter), [torrents, filter]);
+  const categoryCounts = useMemo(() => countByCategory(filteredByStatus), [filteredByStatus]);
   const filteredTorrents = useMemo(
-    () => filterTorrentsByCategory(filterTorrents(torrents, filter), activeCategory),
-    [torrents, filter, activeCategory],
+    () => filterTorrentsByCategory(filteredByStatus, activeCategory),
+    [filteredByStatus, activeCategory],
   );
 
   useEffect(() => {
