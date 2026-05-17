@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g. v1.0.0 or v1.0.0-beta.1)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,7 +24,9 @@ jobs:
       - name: Detect release channel
         id: detect_channel
         run: |
-          if [[ "${{ github.ref_name }}" == *"-beta"* ]]; then
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}"
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" == *"-beta"* ]]; then
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
@@ -34,8 +42,8 @@ jobs:
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `${{ github.ref_name }}`,
-              name: `qBitView ${{ github.ref_name }}`,
+              tag_name: `${{ steps.detect_channel.outputs.tag_name }}`,
+              name: `qBitView ${{ steps.detect_channel.outputs.tag_name }}`,
               draft: true,
               prerelease: ${{ steps.detect_channel.outputs.is_prerelease }},
               generate_release_notes: true,
