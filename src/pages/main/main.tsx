@@ -1,4 +1,5 @@
 import { invokeHost } from "@/native/host-client";
+import { check } from "@tauri-apps/plugin-updater";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadIcon } from "lucide-react";
@@ -15,6 +16,7 @@ import { TorrentDrawer } from "./TorrentDrawer";
 import { countByCategory, countByFilter, filterTorrents, filterTorrentsByCategory } from "./utils";
 import useMainStore from "@/sotres/main";
 import { CommandPalette } from "@/components/CommandPalette";
+import { UpdateDialog } from "@/components/UpdateDialog";
 import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
 import router from "@/router";
 import { useI18n } from "@/lib/language";
@@ -36,7 +38,7 @@ function Main() {
   const t = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { torrents, transferInfo, version, setTorrents, setTransferInfo, setVersion } = useMainStore();
+  const { torrents, transferInfo, version, setTorrents, setTransferInfo, setVersion, setUpdateInfo } = useMainStore();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activeTorrent, setActiveTorrent] = useState<Torrent | null>(null);
@@ -121,6 +123,17 @@ function Main() {
   useEffect(() => {
     invokeHost<string>("get_version").then(setVersion).catch(console.error);
     fetchGlobalLimits();
+    const timer = setTimeout(async () => {
+      try {
+        const update = await check();
+        if (update) {
+          setUpdateInfo({ version: update.version, body: update.body ?? null });
+        }
+      } catch {
+        // silently ignore update check failures
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -306,6 +319,7 @@ function Main() {
         />
       )}
       <Toaster position="bottom-right" richColors />
+      <UpdateDialog />
     </div>
   );
 }
