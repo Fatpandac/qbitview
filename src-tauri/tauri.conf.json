@@ -27,7 +27,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REPLACE_WITH_YOUR_GENERATED_PUBKEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMyNkNDQkZBMENFMkFDMjcKUldRbnJPSU0rc3Rzd2wvTUxhWXlwTHVwK2VvSUVyUWk1eTlGTXV6Mk1mSGRrd1BCV1k1WlEzUWIK",
       "endpoints": [
         "https://github.com/Fatpandac/qBitView/releases/latest/download/latest.json"
       ]
