@@ -8,7 +8,9 @@ use tauri::async_runtime::Mutex;
 use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, WindowEvent};
+#[cfg(target_os = "macos")]
+use tauri::RunEvent;
+use tauri::{AppHandle, Emitter, Manager, Runtime, WindowEvent};
 use std::sync::Arc;
 
 const TRAY_ID: &str = "transfer-monitor";
