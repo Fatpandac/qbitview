@@ -102,8 +102,7 @@ jobs:
             libssl-dev \
             librsvg2-dev \
             patchelf \
-            libayatana-appindicator3-dev \
-            libappindicator3-dev
+            libayatana-appindicator3-dev
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
