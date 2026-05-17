@@ -16,7 +16,6 @@ import { TorrentDrawer } from "./TorrentDrawer";
 import { countByCategory, countByFilter, filterTorrents, filterTorrentsByCategory } from "./utils";
 import useMainStore from "@/sotres/main";
 import { CommandPalette } from "@/components/CommandPalette";
-import { UpdateDialog } from "@/components/UpdateDialog";
 import { parseFilterFromSearch, parseTorrentFromSearch } from "@/components/command-palette.utils";
 import router from "@/router";
 import { useI18n } from "@/lib/language";
@@ -319,7 +318,6 @@ function Main() {
         />
       )}
       <Toaster position="bottom-right" richColors />
-      <UpdateDialog />
     </div>
   );
 }

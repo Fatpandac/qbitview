@@ -13,6 +13,7 @@ import { isMacOS } from "@/lib/platform";
 import { useI18n } from "@/lib/language";
 import { FilterKey } from "./types";
 import { CategoryCount, FILTERS } from "./utils";
+import { UpdateBanner } from "@/components/UpdateBanner";
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "sidebar-collapsed";
 const SIDEBAR_CATEGORIES_COLLAPSED_STORAGE_KEY = "sidebar-categories-collapsed";
@@ -164,6 +165,8 @@ export function Sidebar({
           )}
         </div>
       </ScrollArea>
+
+      {!collapsed && <UpdateBanner />}
 
       {collapsed ? (
         <div className="p-2 flex flex-col items-center gap-2">
