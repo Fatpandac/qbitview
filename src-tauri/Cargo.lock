@@ -3101,7 +3101,7 @@ dependencies = [
 
 [[package]]
 name = "qbitview"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "once_cell",
  "qbit-rs",
